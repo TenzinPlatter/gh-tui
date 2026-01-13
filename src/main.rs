@@ -14,13 +14,14 @@ pub struct App {
     counters: [u8; 2],
     exit: bool,
     err_msgs: [Option<String>; 2],
+    selected: usize,
 }
 
 impl App {
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> anyhow::Result<()> {
         while !self.exit {
             terminal.draw(|frame| self.draw(frame))?;
-            self.handle_events()?;
+            self.handle_events()?; // blocks until an event occurs, thus only draw on change
         }
         Ok(())
     }
@@ -41,48 +42,29 @@ impl App {
     }
 
     fn handle_key_event(&mut self, key_event: KeyEvent) -> anyhow::Result<()> {
-        match key_event.code {
-            KeyCode::Down => {
-                if self.counters[0] > 0 {
-                    self.counters[0] -= 1;
-                    self.err_msgs[0] = None;
-                } else {
-                    self.err_msgs[0] = Some("Counter cannot go below 0 :(".into());
-                }
+        if key_event.code == KeyCode::Left {
+            // alternate between 0 and 1
+            self.selected = 0;
+        } else if key_event.code == KeyCode::Right {
+            self.selected = 1;
+        } else if key_event.code == KeyCode::Up {
+            // increment selected counter
+            if self.counters[self.selected] == u8::MAX {
+                self.err_msgs[self.selected] = Some("Counter overflow".into());
+            } else {
+                self.counters[self.selected] += 1;
+                self.err_msgs[self.selected] = None;
             }
-
-            KeyCode::Up => {
-                if self.counters[0] < 9 {
-                    self.counters[0] += 1;
-                    self.err_msgs[0] = None;
-                } else {
-                    self.err_msgs[1] = Some("Counter cannot go into double digits!!!!".into());
-                }
+        } else if key_event.code == KeyCode::Down {
+            // decrement selected counter
+            if self.counters[self.selected] == u8::MIN {
+                self.err_msgs[self.selected] = Some("Counter underflow".into());
+            } else {
+                self.counters[self.selected] -= 1;
+                self.err_msgs[self.selected] = None;
             }
-
-            KeyCode::Char('s') => {
-                if self.counters[1] > 0 {
-                    self.counters[1] -= 1;
-                    self.err_msgs[1] = None;
-                } else {
-                    self.err_msgs[1] = Some("Counter cannot go below 0 :(".into());
-                }
-            }
-
-            KeyCode::Char('w') => {
-                if self.counters[1] < 9 {
-                    self.counters[1] += 1;
-                    self.err_msgs[1] = None;
-                } else {
-                    self.err_msgs[1] = Some("Counter cannot go into double digits!!!!".into());
-                }
-            }
-
-            KeyCode::Char('q') | KeyCode::Char('Q') => {
-                self.exit = true;
-            }
-
-            _ => {}
+        } else if key_event.code == KeyCode::Char('q') {
+            self.exit = true;
         }
 
         Ok(())
@@ -93,18 +75,10 @@ impl Widget for &App {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let mut blocks = vec![];
         for i in 0..2 {
-            let up = if i == 0 {
-                " <Up> "
-            } else {
-                " <W> "
-            };
+            let up = if i == 0 { " <Up> " } else { " <W> " };
 
-            let down = if i == 0 {
-                " <Down> "
-            } else {
-                " <S> "
-            };
-            
+            let down = if i == 0 { " <Down> " } else { " <S> " };
+
             let title = Line::from(" Counter App Tutorial ".bold());
             let instructions = Line::from(vec![
                 " Decrement ".into(),
@@ -118,7 +92,12 @@ impl Widget for &App {
             let block = Block::bordered()
                 .title(title.centered())
                 .title_bottom(instructions.centered())
-                .border_set(border::THICK);
+                .border_set(border::THICK)
+                .border_style(if self.selected == i {
+                    ratatui::style::Style::default().fg(ratatui::style::Color::Yellow)
+                } else {
+                    ratatui::style::Style::default()
+                });
 
             let counter_line = Line::from(vec![
                 "Value: ".into(),
