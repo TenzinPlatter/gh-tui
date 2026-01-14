@@ -1,5 +1,3 @@
-pub mod keys;
-
 use crossterm::event::{self, Event, KeyEvent, KeyEventKind};
 use ratatui::{
     DefaultTerminal, Frame,
@@ -11,14 +9,18 @@ use ratatui::{
     widgets::{Block, Paragraph, Widget},
 };
 
-use crate::keys::AppKey;
+use crate::{
+    block::{CounterBlock, Selectable},
+    keys::AppKey,
+};
+
+pub mod block;
+pub mod keys;
 
 #[derive(Default, Debug)]
 pub struct App {
-    counters: [u8; 2],
+    counter_blocks: Vec<CounterBlock>,
     exit: bool,
-    err_msgs: [Option<String>; 2],
-    selected: usize,
 }
 
 impl App {
@@ -39,6 +41,7 @@ impl App {
             Event::Key(key_event) if key_event.kind == KeyEventKind::Press => {
                 self.handle_key_event(key_event)?;
             }
+            // TODO: handle navigation, other keys fallthrough
             _ => {}
         }
 
@@ -46,75 +49,28 @@ impl App {
     }
 
     fn handle_key_event(&mut self, key_event: KeyEvent) -> anyhow::Result<()> {
-        if key_event.code == AppKey::Left.into() {
-            // alternate between 0 and 1
-            self.selected = if self.selected == 0 { 1 } else { 0 };
-        } else if key_event.code == AppKey::Right.into() {
-            self.selected = if self.selected == 1 { 0 } else { 1 };
-        } else if key_event.code == AppKey::Up.into() {
-            // increment selected counter
-            if self.counters[self.selected] == 9 {
-                self.err_msgs[self.selected] = Some("Can't go to double digits".into());
-            } else {
-                self.counters[self.selected] += 1;
-                self.err_msgs[self.selected] = None;
-            }
-        } else if key_event.code == AppKey::Down.into() {
-            // decrement selected counter
-            if self.counters[self.selected] == 0 {
-                self.err_msgs[self.selected] = Some("Can't go below zero".into());
-            } else {
-                self.counters[self.selected] -= 1;
-                self.err_msgs[self.selected] = None;
-            }
-        } else if key_event.code == AppKey::Quit.into() {
+        if key_event.code == AppKey::Quit.into() {
             self.exit = true;
+        } else {
+            for block in &mut self.counter_blocks {
+                if block.is_selected() {
+                    block.handle_key_event(&key_event);
+                }
+            }
         }
 
         Ok(())
-    }
-
-    fn create_counter_block(&'_ self, index: usize) -> (Block<'_>, Text<'_>) {
-        let title = Line::from(" Counter App Tutorial ".bold());
-
-        let block = Block::bordered()
-            .title(title.centered())
-            .border_set(border::THICK)
-            .border_style(if self.selected == index {
-                ratatui::style::Style::default().fg(ratatui::style::Color::Yellow)
-            } else {
-                ratatui::style::Style::default()
-            });
-
-        let counter_line = Line::from(vec![
-            "Value: ".into(),
-            self.counters[index].to_string().yellow().bold(),
-        ]);
-
-        let text = if let Some(error) = &self.err_msgs[index] {
-            let mut lines = vec![counter_line];
-            lines.push(Line::from(""));
-            lines.push(Line::from(vec![" Error: ".red().bold(), error.into()]));
-            Text::from(lines)
-        } else {
-            Text::from(counter_line)
-        };
-
-        (block, text)
     }
 }
 
 impl Widget for &App {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let blocks: Vec<_> = (0..2).map(|i| self.create_counter_block(i)).collect();
+        let blocks: Vec<_> = (0..2).map(|_| CounterBlock::default()).collect();
 
         let (top, bottom) = get_layout(area);
 
-        for (index, (block, text)) in blocks.into_iter().enumerate() {
-            Paragraph::new(text)
-                .centered()
-                .block(block)
-                .render(top[index], buf);
+        for (index, block) in blocks.into_iter().enumerate() {
+            block.render(top[index], buf);
         }
 
         instructions()
