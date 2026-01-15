@@ -36,7 +36,7 @@ impl Selectable for CounterBlock {
 
 impl WidgetRef for CounterBlock {
     fn render_ref(&self, area: Rect, buf: &mut Buffer) {
-        let title = Line::from(" Counter App Tutorial ".bold());
+        let title = Line::from(" Counter Block ".bold());
 
         let block = Block::bordered()
             .title(title.centered())

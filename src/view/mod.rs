@@ -48,13 +48,9 @@ impl View {
                 return Some(i);
             }
         }
+
         // Wrap around to the beginning
-        for i in 0..current {
-            if self.sections[i].is_selectable {
-                return Some(i);
-            }
-        }
-        None
+        (0..current).find(|&i| self.sections[i].is_selectable)
     }
 
     fn prev_selectable_section(&self, current: usize) -> Option<usize> {
@@ -64,12 +60,9 @@ impl View {
             }
         }
         // Wrap around to the end
-        for i in (current + 1..self.sections.len()).rev() {
-            if self.sections[i].is_selectable {
-                return Some(i);
-            }
-        }
-        None
+        (current + 1..self.sections.len())
+            .rev()
+            .find(|&i| self.sections[i].is_selectable)
     }
 }
 
@@ -87,11 +80,18 @@ impl Selectable for View {
         self.sections[self.selected_section].view_section.unselect();
         self.is_selected = false;
     }
+
+    fn num_selectable_children(&self) -> usize {
+        self.sections
+            .iter()
+            .filter(|section| section.is_selectable)
+            .count()
+    }
 }
 
 impl KeyHandler for View {
     fn handle_key_event(&mut self, key_event: crossterm::event::KeyEvent) -> bool {
-        let consume_navigation = self.sections.len() > 1;
+        let consume_navigation = self.num_selectable_children() > 1;
 
         // if we have more than one section we want to consume any navigation keys
         match key_event.code.try_into() {
@@ -108,10 +108,8 @@ impl KeyHandler for View {
             }
 
             _ => {
-                for section in self.sections.iter_mut() {
-                    if section.view_section.handle_key_event(key_event) {
-                        return true;
-                    }
+                if let Some(section) = self.sections.get_mut(self.selected_section) {
+                    return section.view_section.handle_key_event(key_event);
                 }
             }
         };

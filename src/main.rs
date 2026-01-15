@@ -17,8 +17,8 @@ fn main() -> anyhow::Result<()> {
         .build();
 
     let view = ViewBuilder::default()
-        .add_selectable_with_constraint(counters, Constraint::Percentage(90))
-        .add_non_selectable_with_constraint(instructions, Constraint::Percentage(10))
+        .add_selectable_with_constraint(counters, Constraint::Percentage(80))
+        .add_non_selectable_with_constraint(instructions, Constraint::Percentage(20))
         .direction(Direction::Vertical)
         .build();
 

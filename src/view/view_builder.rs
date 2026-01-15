@@ -6,7 +6,7 @@ use crate::view::{Section, View, ViewSection};
 pub struct ViewBuilder {
     sections: Vec<Section>,
     /// the internally selected section
-    selected_section: usize,
+    selected_section_idx: usize,
     /// whether the entire view is selected
     is_selected: bool,
     direction: Direction,
@@ -23,7 +23,7 @@ impl<T: ViewSection, const N: usize> From<[T; N]> for ViewBuilder {
                     is_selectable: true,
                 })
                 .collect(),
-            selected_section: 0,
+            selected_section_idx: 0,
             is_selected: false,
             direction: Direction::default(),
         }
@@ -97,13 +97,15 @@ impl ViewBuilder {
     }
 
     pub fn build(mut self) -> View {
-        if self.selected_section < self.sections.len() {
-            self.sections[self.selected_section].view_section.select();
+        if let Some(section) = self.sections.get_mut(self.selected_section_idx)
+            && section.is_selectable
+        {
+            section.view_section.select()
         }
 
         View {
             sections: self.sections,
-            selected_section: self.selected_section,
+            selected_section: self.selected_section_idx,
             last_selected_section: 0,
             is_selected: self.is_selected,
             direction: self.direction,
