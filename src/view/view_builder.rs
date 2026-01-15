@@ -1,10 +1,10 @@
 use ratatui::layout::{Constraint, Direction};
 
-use crate::view::{View, ViewSection};
+use crate::view::{Section, View, ViewSection};
 
 #[derive(Default)]
 pub struct ViewBuilder {
-    sections: Vec<(Box<dyn ViewSection>, Constraint)>,
+    sections: Vec<Section>,
     /// the internally selected section
     selected_section: usize,
     /// whether the entire view is selected
@@ -17,7 +17,11 @@ impl<T: ViewSection, const N: usize> From<[T; N]> for ViewBuilder {
         Self {
             sections: sections
                 .into_iter()
-                .map(|v| (Box::new(v) as Box<dyn ViewSection>, Constraint::Ratio(1, 1)))
+                .map(|v| Section {
+                    view_section: Box::new(v) as Box<dyn ViewSection>,
+                    constraint: Constraint::Ratio(1, 1),
+                    is_selectable: true,
+                })
                 .collect(),
             selected_section: 0,
             is_selected: false,
@@ -37,35 +41,64 @@ impl ViewBuilder {
         self
     }
 
-    pub fn add_section_with_constraint(
+    pub fn add_selectable(mut self, section: impl ViewSection) -> Self {
+        self.sections.push(Section {
+            view_section: Box::new(section),
+            constraint: Constraint::Ratio(1, 1),
+            is_selectable: true,
+        });
+        self
+    }
+
+    pub fn add_selectable_with_constraint(
         mut self,
         section: impl ViewSection,
         constraint: Constraint,
     ) -> Self {
-        self.sections.push((Box::new(section), constraint));
+        self.sections.push(Section {
+            view_section: Box::new(section),
+            constraint,
+            is_selectable: true,
+        });
         self
     }
 
-    pub fn add_section(mut self, new: impl ViewSection) -> Self {
-        self.sections.push((Box::new(new), Constraint::Ratio(1, 1)));
+    pub fn add_non_selectable(mut self, section: impl ViewSection) -> Self {
+        self.sections.push(Section {
+            view_section: Box::new(section),
+            constraint: Constraint::Ratio(1, 1),
+            is_selectable: false,
+        });
         self
     }
 
-    pub fn add_sections<I, T>(mut self, new: I) -> Self
+    pub fn add_non_selectable_with_constraint(
+        mut self,
+        section: impl ViewSection,
+        constraint: Constraint,
+    ) -> Self {
+        self.sections.push(Section {
+            view_section: Box::new(section),
+            constraint,
+            is_selectable: false,
+        });
+        self
+    }
+
+    pub fn add_sections<I, T>(mut self, sections: I) -> Self
     where
         I: IntoIterator<Item = T>,
         T: ViewSection,
     {
-        for s in new.into_iter() {
-            self = self.add_section(s);
+        for section in sections.into_iter() {
+            self = self.add_selectable(section);
         }
-
         self
     }
 
     pub fn build(mut self) -> View {
         if self.selected_section < self.sections.len() {
-            self.sections[self.selected_section].0.select();
+            self.sections[self.selected_section].view_section.select();
         }
 
         View {

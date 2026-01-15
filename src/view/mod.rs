@@ -1,6 +1,6 @@
 use ratatui::{
     buffer::Buffer,
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::{Direction, Layout, Rect},
     widgets::WidgetRef,
 };
 
@@ -9,7 +9,10 @@ use crate::{
     keys::{AppKey, KeyHandler},
 };
 
+mod section;
 mod view_builder;
+
+pub use section::Section;
 pub use view_builder::ViewBuilder;
 
 // Type alias to avoid repeating trait bounds
@@ -19,7 +22,7 @@ impl<T: WidgetRef + KeyHandler + Selectable + 'static> ViewSection for T {}
 
 #[derive(Default)]
 pub struct View {
-    sections: Vec<(Box<dyn ViewSection>, Constraint)>,
+    sections: Vec<Section>,
     // the internally selected section
     selected_section: usize,
     // this isn't optional as unselecting something that wasn't selected doesn't really have an
@@ -32,11 +35,41 @@ pub struct View {
 
 impl View {
     fn select_section(&mut self, new: usize) {
-        self.sections[self.selected_section].0.unselect();
-        self.sections[new].0.select();
+        self.sections[self.selected_section].view_section.unselect();
+        self.sections[new].view_section.select();
 
         self.last_selected_section = self.selected_section;
         self.selected_section = new;
+    }
+
+    fn next_selectable_section(&self, current: usize) -> Option<usize> {
+        for i in (current + 1)..self.sections.len() {
+            if self.sections[i].is_selectable {
+                return Some(i);
+            }
+        }
+        // Wrap around to the beginning
+        for i in 0..current {
+            if self.sections[i].is_selectable {
+                return Some(i);
+            }
+        }
+        None
+    }
+
+    fn prev_selectable_section(&self, current: usize) -> Option<usize> {
+        for i in (0..current).rev() {
+            if self.sections[i].is_selectable {
+                return Some(i);
+            }
+        }
+        // Wrap around to the end
+        for i in (current + 1..self.sections.len()).rev() {
+            if self.sections[i].is_selectable {
+                return Some(i);
+            }
+        }
+        None
     }
 }
 
@@ -46,12 +79,12 @@ impl Selectable for View {
     }
 
     fn select(&mut self) {
-        self.sections[self.selected_section].0.select();
+        self.sections[self.selected_section].view_section.select();
         self.is_selected = true;
     }
 
     fn unselect(&mut self) {
-        self.sections[self.selected_section].0.unselect();
+        self.sections[self.selected_section].view_section.unselect();
         self.is_selected = false;
     }
 }
@@ -63,30 +96,20 @@ impl KeyHandler for View {
         // if we have more than one section we want to consume any navigation keys
         match key_event.code.try_into() {
             Ok(AppKey::Left) if consume_navigation => {
-                let new = if self.selected_section > 0 {
-                    self.selected_section - 1
-                } else {
-                    // if we are at 0 we need to wrap around to the end
-                    self.sections.len() - 1
-                };
-
-                self.select_section(new);
+                if let Some(new) = self.prev_selectable_section(self.selected_section) {
+                    self.select_section(new);
+                }
             }
 
             Ok(AppKey::Right) if consume_navigation => {
-                let new = if self.selected_section < u8::MAX.into() {
-                    (self.selected_section + 1) % self.sections.len()
-                } else {
-                    // we are at u8::MAX, so we wrap to the start
-                    0
-                };
-
-                self.select_section(new);
+                if let Some(new) = self.next_selectable_section(self.selected_section) {
+                    self.select_section(new);
+                }
             }
 
             _ => {
-                for (section, _) in self.sections.iter_mut() {
-                    if section.handle_key_event(key_event) {
+                for section in self.sections.iter_mut() {
+                    if section.view_section.handle_key_event(key_event) {
                         return true;
                     }
                 }
@@ -111,13 +134,13 @@ impl WidgetRef for View {
             .constraints(
                 self.sections
                     .iter()
-                    .map(|(_, constraint)| *constraint)
+                    .map(|section| section.constraint)
                     .collect::<Vec<_>>(),
             )
             .split(area);
 
-        for ((section, _), area) in self.sections.iter().zip(layout.iter()) {
-            section.render_ref(*area, buf);
+        for (section, area) in self.sections.iter().zip(layout.iter()) {
+            section.view_section.render_ref(*area, buf);
         }
     }
 }

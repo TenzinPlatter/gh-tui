@@ -7,18 +7,18 @@ use ratatui::layout::{Constraint, Direction};
 
 fn main() -> anyhow::Result<()> {
     let counters = ViewBuilder::default()
-        .add_section(CounterBlock::default())
-        .add_section(CounterBlock::default())
+        .add_selectable(CounterBlock::default())
+        .add_selectable(CounterBlock::default())
         .direction(ratatui::layout::Direction::Horizontal)
         .build();
 
     let instructions = ViewBuilder::default()
-        .add_section(ParagraphBlock::default())
+        .add_non_selectable(ParagraphBlock::default())
         .build();
 
     let view = ViewBuilder::default()
-        .add_section_with_constraint(counters, Constraint::Percentage(90))
-        .add_section_with_constraint(instructions, Constraint::Percentage(10))
+        .add_selectable_with_constraint(counters, Constraint::Percentage(90))
+        .add_non_selectable_with_constraint(instructions, Constraint::Percentage(10))
         .direction(Direction::Vertical)
         .build();
 
