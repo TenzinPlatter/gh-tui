@@ -14,10 +14,43 @@ use crate::{
 
 pub struct ParagraphBlock {
     paragraph: Paragraph<'static>,
+    block: Block<'static>,
     is_selected: bool,
 }
 
 impl ParagraphBlock {
+    pub fn cli_not_installed() -> Self {
+        let paragraph = Paragraph::new(Text::from(Line::from(
+            " GitHub CLI ('gh') is not installed or not found in PATH. Please install it and ensure it is accessible from your command line. "
+                .red()
+                .italic(),
+        )));
+
+        let block = Block::bordered().border_set(border::THICK);
+
+        Self {
+            paragraph,
+            block,
+            is_selected: false,
+        }
+    }
+
+    pub fn not_authenticated() -> Self {
+        let paragraph = Paragraph::new(Text::from(Line::from(
+            " You are not authenticated. Please run 'gh auth login' to authenticate. "
+                .red()
+                .italic(),
+        )));
+
+        let block = Block::bordered().border_set(border::THICK);
+
+        Self {
+            paragraph,
+            block,
+            is_selected: false,
+        }
+    }
+
     pub fn instructions() -> Self {
         // returns static lifetime as the &str.into() calls wrap a Span<'a> around the &str's lifetime
         // which is 'static
@@ -43,8 +76,13 @@ impl ParagraphBlock {
             quit_instructions,
         ]));
 
+        let block = Block::bordered()
+            .title(" Instructions ".bold().underlined().into_centered_line())
+            .border_set(border::THICK);
+
         Self {
             paragraph,
+            block,
             is_selected: false,
         }
     }
@@ -54,18 +92,9 @@ impl WidgetRef for ParagraphBlock {
     #[doc = " Draws the current state of the widget in the given buffer. That is the only method required"]
     #[doc = " to implement a custom widget."]
     fn render_ref(&self, area: Rect, buf: &mut Buffer) {
-        let block = Block::bordered()
-            .title(Line::from("Instructions".bold()).centered())
-            .border_set(border::THICK)
-            .border_style(if self.is_selected() {
-                Style::default().fg(Color::Yellow)
-            } else {
-                Style::default()
-            });
-
         self.paragraph
             .clone()
-            .block(block)
+            .block(self.block.clone())
             .centered()
             .render(area, buf);
     }
