@@ -1,9 +1,9 @@
 use ratatui::layout::Constraint;
 
-use super::ViewSection;
+use super::PaneTrait;
 
-pub struct Section {
-    pub view_section: Box<dyn ViewSection>,
+pub struct Pane {
+    pub view_section: Box<dyn PaneTrait>,
     pub constraint: Constraint,
     pub is_selectable: bool,
 }

@@ -2,7 +2,7 @@ mod counter;
 pub use counter::CounterBlock;
 
 mod paragraph;
-pub use paragraph::ParagraphBlock;
+pub use paragraph::ParagraphPane;
 
 pub trait Selectable {
     fn is_selected(&self) -> bool;

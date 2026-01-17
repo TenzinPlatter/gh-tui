@@ -9,8 +9,8 @@ use ratatui::{
 };
 
 use crate::{
-    block::Selectable,
     keys::{AppKey, KeyHandler},
+    pane::Selectable,
 };
 
 #[derive(Default, Debug)]
@@ -92,7 +92,7 @@ impl KeyHandler for CounterBlock {
                 }
                 consumed = true;
             }
-            
+
             _ => {}
         };
 

@@ -1,11 +1,28 @@
-use shortcut_notes_tui::{app::App, get_main_view};
+use std::env;
+
+use shortcut_notes_tui::{
+    api::ApiClient, app::App, pane::ParagraphPane, get_main_view, view::ViewBuilder,
+};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let view = get_main_view().await?;
+    let api_key = match env::var("API_TOKEN_SHORTCUT") {
+        Ok(key) => key,
+        Err(_) => {
+            let view = ViewBuilder::default()
+                .add_non_selectable(ParagraphPane::not_authenticated())
+                .build();
 
-    // runs closure, providing a terminal instance once closed, terminal is cleaned up
-    // then we can return any errors and they will be seen without leftover tui
+            ratatui::run(|terminal| App::from(view).run(terminal))?;
+
+            return Ok(());
+        }
+    };
+
+    let api_client = ApiClient::new(api_key);
+    let view = get_main_view(api_client).await?;
+
     ratatui::run(|terminal| App::from(view).run(terminal))?;
+
     Ok(())
 }

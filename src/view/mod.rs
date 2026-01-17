@@ -5,24 +5,24 @@ use ratatui::{
 };
 
 use crate::{
-    block::Selectable,
+    pane::Selectable,
     keys::{AppKey, KeyHandler},
 };
 
 mod section;
 mod view_builder;
 
-pub use section::Section;
+pub use section::Pane;
 pub use view_builder::ViewBuilder;
 
 // Type alias to avoid repeating trait bounds
-pub trait ViewSection: WidgetRef + KeyHandler + Selectable + 'static {}
+pub trait PaneTrait: WidgetRef + KeyHandler + Selectable + 'static {}
 // Blanket implementation for any type that satisfies the bounds
-impl<T: WidgetRef + KeyHandler + Selectable + 'static> ViewSection for T {}
+impl<T: WidgetRef + KeyHandler + Selectable + 'static> PaneTrait for T {}
 
 #[derive(Default)]
 pub struct View {
-    sections: Vec<Section>,
+    sections: Vec<Pane>,
     // the internally selected section
     selected_section: usize,
     // this isn't optional as unselecting something that wasn't selected doesn't really have an

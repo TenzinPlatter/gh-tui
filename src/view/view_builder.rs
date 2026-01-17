@@ -1,10 +1,10 @@
 use ratatui::layout::{Constraint, Direction};
 
-use crate::view::{Section, View, ViewSection};
+use crate::view::{Pane, View, PaneTrait};
 
 #[derive(Default)]
 pub struct ViewBuilder {
-    sections: Vec<Section>,
+    panes: Vec<Pane>,
     /// the internally selected section
     selected_section_idx: usize,
     /// whether the entire view is selected
@@ -12,13 +12,13 @@ pub struct ViewBuilder {
     direction: Direction,
 }
 
-impl<T: ViewSection, const N: usize> From<[T; N]> for ViewBuilder {
+impl<T: PaneTrait, const N: usize> From<[T; N]> for ViewBuilder {
     fn from(sections: [T; N]) -> Self {
         Self {
-            sections: sections
+            panes: sections
                 .into_iter()
-                .map(|v| Section {
-                    view_section: Box::new(v) as Box<dyn ViewSection>,
+                .map(|v| Pane {
+                    view_section: Box::new(v) as Box<dyn PaneTrait>,
                     constraint: Constraint::Ratio(1, 1),
                     is_selectable: true,
                 })
@@ -41,9 +41,9 @@ impl ViewBuilder {
         self
     }
 
-    pub fn add_selectable(mut self, section: impl ViewSection) -> Self {
-        self.sections.push(Section {
-            view_section: Box::new(section),
+    pub fn add_selectable(mut self, pane: impl PaneTrait) -> Self {
+        self.panes.push(Pane {
+            view_section: Box::new(pane),
             constraint: Constraint::Ratio(1, 1),
             is_selectable: true,
         });
@@ -52,20 +52,20 @@ impl ViewBuilder {
 
     pub fn add_selectable_with_constraint(
         mut self,
-        section: impl ViewSection,
+        pane: impl PaneTrait,
         constraint: Constraint,
     ) -> Self {
-        self.sections.push(Section {
-            view_section: Box::new(section),
+        self.panes.push(Pane {
+            view_section: Box::new(pane),
             constraint,
             is_selectable: true,
         });
         self
     }
 
-    pub fn add_non_selectable(mut self, section: impl ViewSection) -> Self {
-        self.sections.push(Section {
-            view_section: Box::new(section),
+    pub fn add_non_selectable(mut self, pane: impl PaneTrait) -> Self {
+        self.panes.push(Pane {
+            view_section: Box::new(pane),
             constraint: Constraint::Ratio(1, 1),
             is_selectable: false,
         });
@@ -74,10 +74,10 @@ impl ViewBuilder {
 
     pub fn add_non_selectable_with_constraint(
         mut self,
-        section: impl ViewSection,
+        section: impl PaneTrait,
         constraint: Constraint,
     ) -> Self {
-        self.sections.push(Section {
+        self.panes.push(Pane {
             view_section: Box::new(section),
             constraint,
             is_selectable: false,
@@ -85,26 +85,26 @@ impl ViewBuilder {
         self
     }
 
-    pub fn add_sections<I, T>(mut self, sections: I) -> Self
+    pub fn add_panes<I, T>(mut self, panes: I) -> Self
     where
         I: IntoIterator<Item = T>,
-        T: ViewSection,
+        T: PaneTrait,
     {
-        for section in sections.into_iter() {
+        for section in panes.into_iter() {
             self = self.add_selectable(section);
         }
         self
     }
 
     pub fn build(mut self) -> View {
-        if let Some(section) = self.sections.get_mut(self.selected_section_idx)
+        if let Some(section) = self.panes.get_mut(self.selected_section_idx)
             && section.is_selectable
         {
             section.view_section.select()
         }
 
         View {
-            sections: self.sections,
+            sections: self.panes,
             selected_section: self.selected_section_idx,
             last_selected_section: 0,
             is_selected: self.is_selected,

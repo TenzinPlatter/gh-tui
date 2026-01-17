@@ -1725,6 +1725,8 @@ dependencies = [
  "rustls",
  "rustls-pki-types",
  "rustls-platform-verifier",
+ "serde",
+ "serde_json",
  "sync_wrapper",
  "tokio",
  "tokio-rustls",
@@ -2007,6 +2009,7 @@ dependencies = [
  "serde_json",
  "subprocess",
  "tokio",
+ "uuid",
 ]
 
 [[package]]
@@ -2577,6 +2580,7 @@ dependencies = [
  "atomic",
  "getrandom 0.3.4",
  "js-sys",
+ "serde_core",
  "wasm-bindgen",
 ]
 

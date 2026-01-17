@@ -8,17 +8,34 @@ use ratatui::{
 };
 
 use crate::{
-    block::Selectable,
-    keys::{AppKey, KeyHandler}, view::{View, ViewBuilder},
+    api::epic::Epic, pane::Selectable, keys::{AppKey, KeyHandler}
 };
 
-pub struct ParagraphBlock {
+pub struct ParagraphPane {
     paragraph: Paragraph<'static>,
     block: Block<'static>,
     is_selected: bool,
 }
 
-impl ParagraphBlock {
+impl ParagraphPane {
+    pub fn epic(epic: &Epic) -> Self {
+        let lines = vec![
+            Line::from(format!("ID: {}", epic.id)),
+            Line::from(format!("Name: {}", epic.name)),
+            Line::from(format!("Description: {}", epic.description)),
+        ];
+
+
+        let paragraph = Paragraph::new(lines);
+        let block = Block::bordered().border_set(border::THICK);
+
+        Self {
+            paragraph,
+            block,
+            is_selected: false,
+        }
+    }
+
     pub fn cli_not_installed() -> Self {
         let paragraph = Paragraph::new(Text::from(Line::from(
             " GitHub CLI ('gh') is not installed or not found in PATH. Please install it and ensure it is accessible from your command line. "
@@ -88,7 +105,7 @@ impl ParagraphBlock {
     }
 }
 
-impl WidgetRef for ParagraphBlock {
+impl WidgetRef for ParagraphPane {
     #[doc = " Draws the current state of the widget in the given buffer. That is the only method required"]
     #[doc = " to implement a custom widget."]
     fn render_ref(&self, area: Rect, buf: &mut Buffer) {
@@ -100,9 +117,9 @@ impl WidgetRef for ParagraphBlock {
     }
 }
 
-impl KeyHandler for ParagraphBlock {}
+impl KeyHandler for ParagraphPane {}
 
-impl Selectable for ParagraphBlock {
+impl Selectable for ParagraphPane {
     fn is_selected(&self) -> bool {
         self.is_selected
     }

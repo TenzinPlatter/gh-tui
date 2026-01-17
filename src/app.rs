@@ -10,7 +10,7 @@ use ratatui::{
 
 use crate::{
     keys::{AppKey, KeyHandler},
-    view::{View, ViewBuilder, ViewSection},
+    view::{View, ViewBuilder, PaneTrait},
 };
 
 pub struct App {
@@ -24,10 +24,10 @@ impl From<View> for App {
     }
 }
 
-impl<T: ViewSection> From<IntoIter<T>> for App {
+impl<T: PaneTrait> From<IntoIter<T>> for App {
     fn from(views: IntoIter<T>) -> Self {
         Self {
-            view: ViewBuilder::default().add_sections(views).build(),
+            view: ViewBuilder::default().add_panes(views).build(),
             exit: false,
         }
     }

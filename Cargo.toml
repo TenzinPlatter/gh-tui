@@ -11,11 +11,12 @@ anyhow = "1.0.100"
 color-eyre = "0.6.3"
 crossterm = "0.29.0"
 ratatui = { version = "0.30.0", features = ["unstable"] }
-reqwest = "0.13.1"
-serde = "1.0.228"
+reqwest = { version = "0.13.1", features = ["json"] }
+serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 subprocess = "0.2.13"
 tokio = { version = "1.49.0", features = ["full"] }
+uuid = { version = "1.19.0", features = ["v4", "serde"] }
 
 # Read the optimization guideline for more details: https://ratatui.rs/recipes/apps/release-your-app/#optimizations
 [profile.release]

@@ -1,27 +1,22 @@
 use ratatui::layout::{Constraint, Direction};
 
 use crate::{
-    block::{CounterBlock, ParagraphBlock}, view::{View, ViewBuilder}
+    api::ApiClient,
+    pane::ParagraphPane,
+    view::{View, ViewBuilder},
 };
 
 pub mod api;
 pub mod app;
-pub mod block;
+pub mod pane;
 pub mod keys;
 pub mod view;
 
-pub async fn get_main_view() -> anyhow::Result<View> {
-    if std::env::var("SHORTCUT_API_TOKEN").is_err() {
-        return Ok(ViewBuilder::default()
-            .add_non_selectable(ParagraphBlock::not_authenticated())
-            .build());
-    }
-
-    let epics = ParagraphBlock::get_owned_epics().await?;
+pub async fn get_main_view(api_client: ApiClient) -> anyhow::Result<View> {
+    let epic_view = api_client.get_epics_view().await?;
 
     Ok(ViewBuilder::default()
-        .add_selectable_with_constraint(counters, Constraint::Percentage(80))
-        .add_non_selectable_with_constraint(instructions, Constraint::Percentage(20))
+        .add_non_selectable(epic_view)
         .direction(Direction::Vertical)
         .build())
 }
