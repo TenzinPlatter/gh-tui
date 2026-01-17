@@ -9,7 +9,7 @@ use ratatui::{
 
 use crate::{
     block::Selectable,
-    keys::{AppKey, KeyHandler},
+    keys::{AppKey, KeyHandler}, view::{View, ViewBuilder},
 };
 
 pub struct ParagraphBlock {
@@ -37,7 +37,7 @@ impl ParagraphBlock {
 
     pub fn not_authenticated() -> Self {
         let paragraph = Paragraph::new(Text::from(Line::from(
-            " You are not authenticated. Please run 'gh auth login' to authenticate. "
+            " The SHORTCUT_API_TOKEN environment variable is not set. Please set it to your Shortcut API token to authenticate. "
                 .red()
                 .italic(),
         )));

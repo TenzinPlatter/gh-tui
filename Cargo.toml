@@ -1,5 +1,5 @@
 [package]
-name = "gh-tui"
+name = "shortcut-notes-tui"
 version = "0.1.0"
 description = "A keyboard first Github TUI"
 authors = ["Tenzin Platter <143778894+TenzinPlatter@users.noreply.github.com>"]
@@ -11,9 +11,11 @@ anyhow = "1.0.100"
 color-eyre = "0.6.3"
 crossterm = "0.29.0"
 ratatui = { version = "0.30.0", features = ["unstable"] }
+reqwest = "0.13.1"
 serde = "1.0.228"
 serde_json = "1.0.149"
 subprocess = "0.2.13"
+tokio = { version = "1.49.0", features = ["full"] }
 
 # Read the optimization guideline for more details: https://ratatui.rs/recipes/apps/release-your-app/#optimizations
 [profile.release]
