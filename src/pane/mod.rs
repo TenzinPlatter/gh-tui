@@ -4,9 +4,6 @@ pub use counter::CounterBlock;
 mod paragraph;
 pub use paragraph::ParagraphPane;
 
-mod error;
-pub use error::ErrorPane;
-
 mod epic;
 pub use epic::EpicPane;
 
