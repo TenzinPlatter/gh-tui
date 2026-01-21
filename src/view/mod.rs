@@ -1,7 +1,7 @@
 use ratatui::{
     buffer::Buffer,
     layout::{Direction, Layout, Rect},
-    widgets::WidgetRef,
+    widgets::{Widget, WidgetRef},
 };
 
 use crate::{
@@ -11,13 +11,12 @@ use crate::{
 
 mod section;
 mod view_builder;
+pub mod list;
 
 pub use section::Pane;
 pub use view_builder::ViewBuilder;
 
-// Type alias to avoid repeating trait bounds
 pub trait PaneTrait: WidgetRef + KeyHandler + Selectable + 'static {}
-// Blanket implementation for any type that satisfies the bounds
 impl<T: WidgetRef + KeyHandler + Selectable + 'static> PaneTrait for T {}
 
 #[derive(Default)]
@@ -34,6 +33,8 @@ pub struct View {
 }
 
 impl View {
+
+    
     fn select_section(&mut self, new: usize) {
         self.panes[self.selected_section_idx].view_section.unselect();
         self.panes[new].view_section.select();

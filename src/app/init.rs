@@ -45,7 +45,7 @@ impl App {
 
             if let Some(stories) = saved_stories {
                 // TODO: add something visual to show that we are still fetching stories from api
-                let _ = event_tx.send(AppEvent::StoriesLoaded(stories));
+                let _ = event_tx.send(AppEvent::StoriesLoaded((stories, true)));
             }
 
             match api_client_clone
@@ -53,7 +53,7 @@ impl App {
                 .await
             {
                 Ok(stories) => {
-                    let _ = event_tx.send(AppEvent::StoriesLoaded(stories));
+                    let _ = event_tx.send(AppEvent::StoriesLoaded((stories, false)));
                 }
                 Err(e) => {
                     let _ = event_tx.send(AppEvent::UnexpectedError(e));

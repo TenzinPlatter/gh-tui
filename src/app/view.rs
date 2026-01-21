@@ -19,7 +19,7 @@ impl App {
             .build()
     }
 
-    pub fn get_loading_view() -> View {
+    pub fn get_loading_view_stories() -> View {
         let loading_pane = ParagraphPane::loading("stories");
         ViewBuilder::default()
             .add_non_selectable(loading_pane)

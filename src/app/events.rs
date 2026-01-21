@@ -2,19 +2,20 @@ use anyhow::Result;
 
 use crate::{
     api::{
-        epic::Epic,
+        epic::{Epic, view::create_epics_view},
         iteration::Iteration,
-        story::{Story, view::create_stories_view},
-        epic::view::create_epics_view,
+        story::Story,
     },
     app::App,
+    view::{ViewBuilder, list::ListPane},
 };
 
 /// Events sent from background tasks to the main app
 pub enum AppEvent {
     UnexpectedError(anyhow::Error),
     EpicsLoaded(Vec<Epic>),
-    StoriesLoaded(Vec<Story>),
+    /// (stories, are_saved)
+    StoriesLoaded((Vec<Story>, bool)),
     IterationLoaded(Iteration),
 }
 
@@ -27,15 +28,24 @@ impl App {
             AppEvent::EpicsLoaded(epics) => {
                 self.view = create_epics_view(epics);
             }
-            AppEvent::StoriesLoaded(stories) => {
+            AppEvent::StoriesLoaded((stories, are_saved)) => {
+                // TODO: implement eq traits for &Story so we don't have to clone
+                if !are_saved && let Some(saved) = &self.config.iteration_stories
+                    && saved.iter().zip(stories.clone()).all(|(a, b)| *a == b)
+                {
+                    return Ok(());
+                }
+
                 self.config.iteration_stories = Some(stories.clone());
                 self.config.write()?;
-                self.view = create_stories_view(stories);
+                self.view = ViewBuilder::default()
+                    .add_selectable(ListPane::new(stories))
+                    .build();
             }
             AppEvent::IterationLoaded(iteration) => {
                 self.config.current_iteration = Some(iteration);
                 self.config.write()?;
-                self.view = App::get_loading_view();
+                self.view = App::get_loading_view_stories();
             }
         }
 

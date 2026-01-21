@@ -1,7 +1,10 @@
 use anyhow::Result;
 use crossterm::event::{self, Event, KeyEventKind};
 
-use crate::{app::App, keys::{AppKey, KeyHandler}};
+use crate::{
+    app::App,
+    keys::{AppKey, KeyHandler},
+};
 
 impl App {
     pub(super) async fn handle_events(&mut self) -> Result<()> {
@@ -16,7 +19,6 @@ impl App {
             }) => {
                 match terminal_event?? {
                     Event::Key(key_event) if key_event.kind == KeyEventKind::Press => {
-                        // Dismiss notification on any key
                         if key_event.code == AppKey::Quit.into() {
                             self.exit = true;
                         } else {

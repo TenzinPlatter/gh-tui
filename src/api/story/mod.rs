@@ -1,13 +1,16 @@
 use anyhow::Context;
+use ratatui::{
+    text::{Line, Text},
+    widgets::ListItem,
+};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::api::{ApiClient, branch::Branch, story::comment::StoryComment};
 
 pub mod comment;
-pub mod view;
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub struct Story {
     pub branches: Vec<Branch>,
     pub completed: bool,
@@ -52,5 +55,24 @@ impl ApiClient {
         };
 
         Ok(stories)
+    }
+}
+
+impl From<Story> for ListItem<'static> {
+    fn from(story: Story) -> Self {
+        let description = story
+            .description
+            .lines()
+            .map(|l| Line::from(format!("  {}", l)));
+
+        let mut text = vec![
+            Line::from(format!("Name: {}", story.name)),
+            Line::from("Description:"),
+        ];
+
+        text.extend(description);
+        text.push(Line::from(""));
+
+        Self::new(text)
     }
 }
