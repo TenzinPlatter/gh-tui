@@ -31,7 +31,7 @@ impl App {
 
         let api_client_clone = api_client.clone();
         let saved_iteration = config.current_iteration.clone();
-        let _saved_stories = config.iteration_stories.clone();
+        let saved_stories = config.iteration_stories.clone();
         tokio::spawn(async move {
             let iteration = match get_current_iteration(saved_iteration, &api_client_clone).await {
                 Ok(it) => {
@@ -44,9 +44,11 @@ impl App {
                 }
             };
 
-            // TODO: either need to find a way to check if we are up to date without fetching all
-            // stories, or just show **potentially** out of date stories and update once we finish
-            // fetching
+            if let Some(stories) = saved_stories {
+                // TODO: add something visual to show that we are still fetching stories from api
+                let _ = event_tx.send(AppEvent::StoriesLoaded(stories));
+            }
+
             match api_client_clone
                 .get_owned_iteration_stories(&iteration)
                 .await
