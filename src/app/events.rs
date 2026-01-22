@@ -2,10 +2,13 @@ use anyhow::Result;
 
 use crate::{
     api::{
-        epic::{view::create_epics_view, Epic},
+        epic::{Epic, view::create_epics_view},
         iteration::Iteration,
         story::Story,
-    }, app::App, pane::ListPane, view::ViewBuilder
+    },
+    app::App,
+    pane::ListPane,
+    view::ViewBuilder,
 };
 
 /// Events sent from background tasks to the main app
@@ -27,9 +30,9 @@ impl App {
                 self.view = create_epics_view(epics);
             }
             AppEvent::StoriesLoaded((stories, are_saved)) => {
-                // TODO: implement eq traits for &Story so we don't have to clone
-                if !are_saved && let Some(saved) = &self.config.iteration_stories
-                    && saved.iter().zip(stories.clone()).all(|(a, b)| *a == b)
+                if !are_saved
+                    && let Some(saved) = &self.config.iteration_stories
+                    && saved.iter().zip(stories.iter()).all(|(a, b)| a.id == b.id)
                 {
                     return Ok(());
                 }
