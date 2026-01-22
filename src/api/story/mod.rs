@@ -1,3 +1,5 @@
+use std::process::Command;
+
 use anyhow::Context;
 use ratatui::{style::Style, text::Line, widgets::ListItem};
 use serde::{Deserialize, Serialize};
@@ -5,7 +7,8 @@ use uuid::Uuid;
 
 use crate::{
     api::{ApiClient, branch::Branch, story::comment::StoryComment},
-    view::list::ExpandableListItem,
+    keys::AppKey,
+    view::list::{EditableListItem, ExpandableListItem},
 };
 
 pub mod comment;
@@ -71,12 +74,22 @@ impl ExpandableListItem for Story {
             }
         } else {
             text.push(
-                Line::from("  Press <Enter> to view description").style(Style::default().italic()),
+                Line::from(format!(
+                    "  Press <{}> to view description",
+                    AppKey::Select.as_keycode()
+                ))
+                .style(Style::default().italic()),
             )
         }
 
         text.push(Line::from(""));
 
         ListItem::new(text)
+    }
+}
+
+impl EditableListItem for Story {
+    fn get_file_name(&self) -> String {
+        self.name.to_string()
     }
 }

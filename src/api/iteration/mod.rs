@@ -10,9 +10,9 @@ use crate::api::{
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct Iteration {
-    id: i32,
-    name: String,
-    description: String,
+    pub id: i32,
+    pub name: String,
+    pub description: String,
     pub start_date: NaiveDate,
     pub end_date: NaiveDate,
 }

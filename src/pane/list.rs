@@ -8,23 +8,26 @@ use ratatui::{
     text::Line,
     widgets::{Block, List, ListState, StatefulWidget, WidgetRef},
 };
+use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 
 use crate::{
+    app::{App, AppEvent},
     keys::{AppKey, KeyHandler},
     pane::Selectable,
-    view::list::ExpandableListItem,
+    view::list::{EditableListItem, ExpandableListItem},
 };
 
-pub struct ListPane<T: ExpandableListItem + Clone> {
+pub struct ListPane<T: ExpandableListItem + EditableListItem + Clone> {
     list: List<'static>,
     list_items_shadow: Vec<T>,
     state: Cell<ListState>,
     expanded_item_indexes: HashSet<usize>,
     is_selected: bool,
+    sender: UnboundedSender<AppEvent>,
 }
 
-impl<T: ExpandableListItem + Clone> ListPane<T> {
-    pub fn new(items: Vec<T>) -> Self {
+impl<T: ExpandableListItem + EditableListItem + Clone> ListPane<T> {
+    pub fn new(items: Vec<T>, sender: UnboundedSender<AppEvent>) -> Self {
         let list_items: Vec<_> = items
             .clone()
             .into_iter()
@@ -47,16 +50,12 @@ impl<T: ExpandableListItem + Clone> ListPane<T> {
             list_items_shadow: items,
             is_selected: false,
             expanded_item_indexes: HashSet::new(),
+            sender,
         }
-    }
-
-    pub fn with_state(mut self, state: ListState) -> Self {
-        self.state = Cell::new(state);
-        self
     }
 }
 
-impl<T: ExpandableListItem + Clone> WidgetRef for ListPane<T> {
+impl<T: ExpandableListItem + EditableListItem + Clone> WidgetRef for ListPane<T> {
     #[doc = " Draws the current state of the widget in the given buffer. That is the only method required"]
     #[doc = " to implement a custom widget."]
     fn render_ref(&self, area: Rect, buf: &mut Buffer) {
@@ -66,7 +65,7 @@ impl<T: ExpandableListItem + Clone> WidgetRef for ListPane<T> {
     }
 }
 
-impl<T: ExpandableListItem + Clone> Selectable for ListPane<T> {
+impl<T: ExpandableListItem + EditableListItem + Clone> Selectable for ListPane<T> {
     fn is_selected(&self) -> bool {
         self.is_selected
     }
@@ -86,7 +85,7 @@ impl<T: ExpandableListItem + Clone> Selectable for ListPane<T> {
     }
 }
 
-impl<T: ExpandableListItem + Clone> KeyHandler for ListPane<T> {
+impl<T: ExpandableListItem + EditableListItem + Clone> KeyHandler for ListPane<T> {
     fn handle_key_event(&mut self, key_event: crossterm::event::KeyEvent) -> bool {
         match key_event.code.try_into() {
             Ok(AppKey::Up) => {
@@ -112,6 +111,15 @@ impl<T: ExpandableListItem + Clone> KeyHandler for ListPane<T> {
                     }
                 } else {
                     self.state.get_mut().select(Some(0));
+                }
+            }
+
+            Ok(AppKey::Edit) => {
+                if let Some(selected_idx) = self.state.get().selected() {
+                    let item = &self.list_items_shadow[selected_idx];
+                    let _ = self
+                        .sender
+                        .send(AppEvent::OpenInEditor(item.get_file_name()));
                 }
             }
 

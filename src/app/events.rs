@@ -1,4 +1,9 @@
+use std::{env, io::Stdout, process::Command};
+
 use anyhow::Result;
+use crossterm::terminal;
+use ratatui::{Terminal, prelude::CrosstermBackend};
+use tokio::sync::mpsc::UnboundedSender;
 
 use crate::{
     api::{
@@ -18,10 +23,16 @@ pub enum AppEvent {
     /// (stories, are_saved)
     StoriesLoaded((Vec<Story>, bool)),
     IterationLoaded(Iteration),
+    OpenInEditor(String),
 }
 
 impl App {
-    pub(super) fn handle_app_event(&mut self, event: AppEvent) -> Result<()> {
+    pub(super) fn handle_app_event(
+        &mut self,
+        event: AppEvent,
+        sender: UnboundedSender<AppEvent>,
+        terminal: &mut Terminal<CrosstermBackend<Stdout>>,
+    ) -> Result<()> {
         match event {
             AppEvent::UnexpectedError(e) => {
                 return Err(e);
@@ -40,13 +51,24 @@ impl App {
                 self.config.iteration_stories = Some(stories.clone());
                 self.config.write()?;
                 self.view = ViewBuilder::default()
-                    .add_selectable(ListPane::new(stories))
+                    .add_selectable(ListPane::new(stories, sender))
                     .build();
             }
             AppEvent::IterationLoaded(iteration) => {
                 self.config.current_iteration = Some(iteration);
                 self.config.write()?;
                 self.view = App::get_loading_view_stories();
+            }
+            AppEvent::OpenInEditor(file) => {
+                let editor = env::var("EDITOR").unwrap_or("nvim".to_string());
+                let iteration_name = match &self.config.current_iteration {
+                    Some(it) => it.name.clone(),
+                    None => "No Iteration".to_string(),
+                };
+
+                let note_path = format!("{}/{}/{}", self.config.notes_dir, iteration_name, file);
+                Command::new(editor).arg(note_path).status()?;
+                terminal.clear()?;
             }
         }
 

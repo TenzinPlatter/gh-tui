@@ -9,6 +9,7 @@ pub struct Config {
     pub current_iteration: Option<Iteration>,
     pub iteration_stories: Option<Vec<Story>>,
     pub user_id: Option<Uuid>,
+    pub notes_dir: String,
 }
 
 impl Config {

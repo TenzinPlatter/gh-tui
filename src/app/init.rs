@@ -24,6 +24,7 @@ impl App {
 
         // Create channel for background tasks to communicate with main app
         let (event_tx, event_rx) = mpsc::unbounded_channel();
+        let event_tx_clone = event_tx.clone();
 
         // Start with a loading view
         let view = Self::get_loading_view_iteration();
@@ -66,7 +67,8 @@ impl App {
             view,
             exit: false,
             api_client,
-            event_rx,
+            reciever: event_rx,
+            sender: event_tx_clone,
         })
     }
 }
