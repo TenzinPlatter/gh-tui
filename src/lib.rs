@@ -12,6 +12,7 @@ pub mod pane;
 pub mod view;
 pub mod cache;
 pub mod macros;
+pub mod note;
 
 pub async fn get_api_key() -> anyhow::Result<String> {
     std::env::var("SHORTCUT_API_TOKEN").context(

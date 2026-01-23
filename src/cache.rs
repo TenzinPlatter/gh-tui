@@ -15,7 +15,7 @@ pub struct Cache {
     pub current_iteration: Option<Iteration>,
     pub iteration_stories: Option<Vec<Story>>,
     pub user_id: Option<Uuid>,
-    cache_dir: PathBuf,
+    pub cache_dir: PathBuf,
 }
 
 impl Default for Cache {
@@ -38,7 +38,7 @@ impl Cache {
 
     fn get_cache_file(cache_dir: &Path) -> PathBuf {
         let mut clone = cache_dir.to_path_buf();
-        clone.push("api.cache");
+        clone.push("cache.json");
         clone
     }
 

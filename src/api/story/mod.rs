@@ -1,14 +1,10 @@
-use std::process::Command;
-
 use anyhow::Context;
 use ratatui::{style::Style, text::Line, widgets::ListItem};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-    api::{ApiClient, branch::Branch, story::comment::StoryComment},
-    keys::AppKey,
-    view::list::{EditableListItem, ExpandableListItem},
+    api::{branch::Branch, story::comment::StoryComment, ApiClient}, dbg_file, keys::AppKey
 };
 
 pub mod comment;
@@ -23,6 +19,7 @@ pub struct Story {
     pub id: i32,
     pub iteration_id: Option<i32>,
     pub name: String,
+    pub app_url: String,
 }
 
 #[derive(Deserialize)]
@@ -61,8 +58,8 @@ impl ApiClient {
     }
 }
 
-impl ExpandableListItem for Story {
-    fn as_list_item(&self, expanded: bool) -> ListItem<'static> {
+impl Story {
+    pub fn into_list_item(&self, expanded: bool) -> ListItem<'static> {
         let mut text = vec![
             Line::from(self.name.to_string()),
             Line::from("Description:"),
@@ -86,10 +83,8 @@ impl ExpandableListItem for Story {
 
         ListItem::new(text)
     }
-}
 
-impl EditableListItem for Story {
-    fn get_file_name(&self) -> String {
+    pub fn get_file_name(&self) -> String {
         self.name.to_string()
     }
 }

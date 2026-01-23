@@ -15,6 +15,7 @@ pub struct Iteration {
     pub description: String,
     pub start_date: NaiveDate,
     pub end_date: NaiveDate,
+    pub app_url: String,
 }
 
 #[derive(Deserialize)]

@@ -1,4 +1,4 @@
-use std::{cell::Cell, collections::HashSet};
+use std::{cell::Cell, collections::HashSet, mem};
 
 use ratatui::{
     buffer::Buffer,
@@ -8,30 +8,30 @@ use ratatui::{
     text::Line,
     widgets::{Block, List, ListState, StatefulWidget, WidgetRef},
 };
-use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
+use tokio::sync::mpsc::{UnboundedSender};
 
 use crate::{
-    app::{App, AppEvent},
+    api::story::Story,
+    app::AppEvent,
     keys::{AppKey, KeyHandler},
     pane::Selectable,
-    view::list::{EditableListItem, ExpandableListItem},
 };
 
-pub struct ListPane<T: ExpandableListItem + EditableListItem + Clone> {
+pub struct StoryListPane {
     list: List<'static>,
-    list_items_shadow: Vec<T>,
+    list_items_shadow: Vec<Story>,
     state: Cell<ListState>,
     expanded_item_indexes: HashSet<usize>,
     is_selected: bool,
     sender: UnboundedSender<AppEvent>,
 }
 
-impl<T: ExpandableListItem + EditableListItem + Clone> ListPane<T> {
-    pub fn new(items: Vec<T>, sender: UnboundedSender<AppEvent>) -> Self {
+impl StoryListPane {
+    pub fn new(items: Vec<Story>, sender: UnboundedSender<AppEvent>) -> Self {
         let list_items: Vec<_> = items
             .clone()
             .into_iter()
-            .map(|s| s.as_list_item(false))
+            .map(|s| s.into_list_item(false))
             .collect();
 
         let block = Block::bordered().border_set(border::THICK);
@@ -44,7 +44,7 @@ impl<T: ExpandableListItem + EditableListItem + Clone> ListPane<T> {
 
         let state = Cell::new(ListState::default());
 
-        ListPane {
+        StoryListPane {
             list,
             state,
             list_items_shadow: items,
@@ -55,7 +55,7 @@ impl<T: ExpandableListItem + EditableListItem + Clone> ListPane<T> {
     }
 }
 
-impl<T: ExpandableListItem + EditableListItem + Clone> WidgetRef for ListPane<T> {
+impl WidgetRef for StoryListPane {
     #[doc = " Draws the current state of the widget in the given buffer. That is the only method required"]
     #[doc = " to implement a custom widget."]
     fn render_ref(&self, area: Rect, buf: &mut Buffer) {
@@ -65,7 +65,7 @@ impl<T: ExpandableListItem + EditableListItem + Clone> WidgetRef for ListPane<T>
     }
 }
 
-impl<T: ExpandableListItem + EditableListItem + Clone> Selectable for ListPane<T> {
+impl Selectable for StoryListPane {
     fn is_selected(&self) -> bool {
         self.is_selected
     }
@@ -85,7 +85,7 @@ impl<T: ExpandableListItem + EditableListItem + Clone> Selectable for ListPane<T
     }
 }
 
-impl<T: ExpandableListItem + EditableListItem + Clone> KeyHandler for ListPane<T> {
+impl KeyHandler for StoryListPane {
     fn handle_key_event(&mut self, key_event: crossterm::event::KeyEvent) -> bool {
         match key_event.code.try_into() {
             Ok(AppKey::Up) => {
@@ -117,9 +117,7 @@ impl<T: ExpandableListItem + EditableListItem + Clone> KeyHandler for ListPane<T
             Ok(AppKey::Edit) => {
                 if let Some(selected_idx) = self.state.get().selected() {
                     let item = &self.list_items_shadow[selected_idx];
-                    let _ = self
-                        .sender
-                        .send(AppEvent::OpenInEditor(item.get_file_name()));
+                    let _ = self.sender.send(AppEvent::OpenStoryNote(item.clone()));
                 }
             }
 
@@ -135,10 +133,11 @@ impl<T: ExpandableListItem + EditableListItem + Clone> KeyHandler for ListPane<T
                         .list_items_shadow
                         .iter()
                         .enumerate()
-                        .map(|(i, item)| item.as_list_item(self.expanded_item_indexes.contains(&i)))
+                        .map(|(i, item)| item.into_list_item(self.expanded_item_indexes.contains(&i)))
                         .collect();
 
-                    self.list = self.list.clone().items(items);
+                    let old = mem::take(&mut self.list);
+                    self.list = old.items(items);
 
                     return true;
                 }

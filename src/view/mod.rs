@@ -11,7 +11,6 @@ use crate::{
 
 mod section;
 mod view_builder;
-pub mod list;
 
 pub use section::Pane;
 pub use view_builder::ViewBuilder;

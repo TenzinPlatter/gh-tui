@@ -1,6 +1,8 @@
 use std::{
     env,
+    fs::{File, OpenOptions, create_dir_all, read_to_string},
     io::{Stdout, stdout},
+    path::Path,
     process::Command,
 };
 
@@ -19,7 +21,9 @@ use crate::{
         story::Story,
     },
     app::App,
-    pane::ListPane,
+    dbg_file,
+    note::Note,
+    pane::StoryListPane,
     view::ViewBuilder,
 };
 
@@ -30,7 +34,7 @@ pub enum AppEvent {
     /// (stories, are_saved)
     StoriesLoaded((Vec<Story>, bool)),
     IterationLoaded(Iteration),
-    OpenInEditor(String),
+    OpenStoryNote(Story),
 }
 
 impl App {
@@ -58,7 +62,7 @@ impl App {
                 self.cache.iteration_stories = Some(stories.clone());
                 self.cache.write()?;
                 self.view = ViewBuilder::default()
-                    .add_selectable(ListPane::new(stories, sender))
+                    .add_selectable(StoryListPane::new(stories, sender))
                     .build();
             }
             AppEvent::IterationLoaded(iteration) => {
@@ -66,19 +70,38 @@ impl App {
                 self.cache.write()?;
                 self.view = App::get_loading_view_stories();
             }
-            AppEvent::OpenInEditor(file) => {
-                let editor = env::var("EDITOR").unwrap_or("nvim".to_string());
-                let iteration_name = match &self.cache.current_iteration {
-                    Some(it) => it.name.clone(),
-                    None => "No Iteration".to_string(),
-                };
+            AppEvent::OpenStoryNote(story) => {
+                // TODO: epic from story
+                let note = Note::new(
+                    &self.config.notes_dir,
+                    &story,
+                    self.cache.current_iteration.as_ref(),
+                );
 
-                let note_path = format!("{}/{}/{}", self.config.notes_dir, iteration_name, file);
+                let editor = env::var("EDITOR").unwrap_or("nvim".to_string());
+
+                if note.path.is_dir() {
+                    anyhow::bail!("Note path: {} is not a file", note.path.display());
+                }
+
+                if let Some(p) = note.path.parent() {
+                    create_dir_all(p)?;
+                }
+
+                dbg_file!("Opening note: {}", note.path.display());
+
+                let mut f = OpenOptions::new().create(true).read(true).write(true).open(&note.path)?;
+                let buf = read_to_string(&note.path)?;
+
+                if buf.is_empty() {
+                    dbg_file!("Writing frontmatter to {}", note.path.display());
+                    note.write_frontmatter(&mut f)?;
+                }
 
                 stdout().execute(LeaveAlternateScreen)?;
                 disable_raw_mode()?;
 
-                Command::new(editor).arg(note_path).status()?;
+                Command::new(editor).arg(note.path).status()?;
 
                 stdout().execute(EnterAlternateScreen)?;
                 enable_raw_mode()?;

@@ -7,8 +7,8 @@ pub use paragraph::ParagraphPane;
 mod epic;
 pub use epic::EpicPane;
 
-mod list;
-pub use list::ListPane;
+mod story_list;
+pub use story_list::StoryListPane;
 
 pub trait Selectable {
     fn is_selected(&self) -> bool;
