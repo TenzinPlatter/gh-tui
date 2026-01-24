@@ -1,3 +1,6 @@
+#![allow(dead_code)]
+#![cfg(any())]
+
 use std::io::Stdout;
 
 use anyhow::Result;
@@ -40,7 +43,7 @@ impl App {
             }
 
             // Handle app events from background tasks
-            Some(app_event) = self.reciever.recv() => {
+            Some(app_event) = self.receiver.recv() => {
                 self.handle_app_event(app_event, sender, terminal)?;
             }
         }

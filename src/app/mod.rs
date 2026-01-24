@@ -1,5 +1,5 @@
 use anyhow::Result;
-use ratatui::{DefaultTerminal, Frame, widgets::WidgetRef};
+use ratatui::{DefaultTerminal, Frame, widgets::FrameExt};
 use tokio::sync::mpsc;
 
 use crate::{
@@ -36,13 +36,70 @@ impl App {
     pub async fn main_loop(&mut self, terminal: &mut DefaultTerminal) -> Result<()> {
         while !self.exit {
             terminal.draw(|frame| self.draw(frame))?;
-            self.handle_events(self.sender.clone(), terminal).await?;
+
+            if let Some(msg) = self.poll_for_message().await? {
+                let commands = self.update(msg);
+
+                for cmd in commands {
+                    cmd::execute(
+                        cmd,
+                        self.sender.clone(),
+                        &self.model.config,
+                        &mut self.model.cache,
+                        &self.api_client,
+                        terminal,
+                    )
+                    .await?;
+                }
+            }
         }
 
         Ok(())
     }
 
-    fn draw(&mut self, frame: &mut Frame) {
-        self.view.render_ref(frame.area(), frame.buffer_mut());
+    async fn poll_for_message(&mut self) -> Result<Option<msg::Msg>> {
+        use crossterm::event::{self, Event, KeyEventKind};
+        use std::time::Duration;
+
+        tokio::select! {
+            terminal_event = tokio::task::spawn_blocking(|| {
+                if event::poll(Duration::from_millis(100))? {
+                    event::read()
+                } else {
+                    Ok(Event::Resize(0, 0))
+                }
+            }) => {
+                match terminal_event?? {
+                    Event::Key(key) if key.kind == KeyEventKind::Press => {
+                        Ok(Some(msg::Msg::KeyPressed(key)))
+                    }
+                    _ => Ok(None)
+                }
+            }
+
+            Some(msg) = self.receiver.recv() => {
+                Ok(Some(msg))
+            }
+        }
+    }
+
+    fn draw(&self, frame: &mut Frame) {
+        use ratatui::layout::{Constraint, Direction, Layout};
+        use crate::view::story_list::StoryListView;
+
+        let chunks = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([
+                Constraint::Percentage(70),
+                Constraint::Percentage(30),
+            ])
+            .split(frame.area());
+
+        let story_list_view = StoryListView::new(
+            &self.model.data.stories,
+            &self.model.ui.story_list,
+            self.model.ui.focused_pane == model::PaneId::StoryList,
+        );
+        frame.render_widget_ref(story_list_view, chunks[0]);
     }
 }
