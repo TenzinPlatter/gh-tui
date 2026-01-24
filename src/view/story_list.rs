@@ -12,8 +12,6 @@ use crate::{
     app::model::StoryListState,
 };
 
-/// Stateless view for story list
-/// Holds references to data and state, rebuilt every frame
 pub struct StoryListView<'a> {
     stories: &'a [Story],
     state: &'a StoryListState,
@@ -36,7 +34,6 @@ impl<'a> StoryListView<'a> {
 
 impl<'a> WidgetRef for StoryListView<'a> {
     fn render_ref(&self, area: Rect, buf: &mut Buffer) {
-        // Build list items from stories + expansion state
         let list_items: Vec<_> = self
             .stories
             .iter()
@@ -54,7 +51,6 @@ impl<'a> WidgetRef for StoryListView<'a> {
             .highlight_symbol(Line::from(highlight_symbol))
             .highlight_style(Style::default().blue().bold());
 
-        // Create ephemeral ListState from our persistent state
         let mut list_state = ListState::default();
         list_state.select(self.state.selected_index);
 

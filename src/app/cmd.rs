@@ -16,7 +16,6 @@ use crate::{
     note::Note,
 };
 
-/// Commands describe side effects to execute after state updates
 #[derive(Debug, Clone)]
 pub enum Cmd {
     None,
@@ -27,7 +26,6 @@ pub enum Cmd {
     Batch(Vec<Cmd>),
 }
 
-/// Execute a command asynchronously
 pub async fn execute(
     cmd: Cmd,
     sender: UnboundedSender<Msg>,
@@ -71,7 +69,6 @@ pub async fn execute(
     }
 }
 
-/// Open a note in the configured editor
 fn open_note_in_editor(
     story: Story,
     iteration: Option<Iteration>,
@@ -104,14 +101,11 @@ fn open_note_in_editor(
         note.write_frontmatter(&mut f)?;
     }
 
-    // Suspend TUI
     std::io::stdout().execute(LeaveAlternateScreen)?;
     disable_raw_mode()?;
 
-    // Open editor
     ProcessCommand::new(editor).arg(note.path).status()?;
 
-    // Resume TUI
     std::io::stdout().execute(EnterAlternateScreen)?;
     enable_raw_mode()?;
     terminal.clear()?;

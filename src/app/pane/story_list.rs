@@ -6,12 +6,8 @@ use crate::{
     keys::AppKey,
 };
 
-/// Story list pane UI state (re-exported from model for convenience)
 pub use crate::app::model::StoryListState;
 
-/// Update function for story list pane
-/// Takes current state, domain data, and message
-/// Returns commands to execute
 pub fn update(
     state: &mut StoryListState,
     stories: &[Story],
@@ -72,7 +68,6 @@ pub fn update(
     }
 }
 
-/// Translate keyboard input to story list messages
 pub fn key_to_msg(key: KeyEvent) -> Option<StoryListMsg> {
     match key.code.try_into() {
         Ok(AppKey::Down) => Some(StoryListMsg::SelectNext),
