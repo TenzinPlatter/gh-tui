@@ -9,6 +9,7 @@ use crate::{
 pub mod events;
 pub mod handlers;
 pub mod init;
+pub mod model;
 pub mod view;
 
 // Re-export AppEvent for convenience
