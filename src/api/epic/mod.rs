@@ -11,7 +11,7 @@ pub struct EpicSlim {
     pub owner_ids: Vec<Uuid>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct Epic {
     pub id: i32,
     pub completed: bool,

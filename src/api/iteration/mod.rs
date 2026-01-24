@@ -8,7 +8,7 @@ use crate::api::{
     story::{Story, StorySlim},
 };
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct Iteration {
     pub id: i32,
     pub name: String,

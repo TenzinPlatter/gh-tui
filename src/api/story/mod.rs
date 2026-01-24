@@ -9,7 +9,7 @@ use crate::{
 
 pub mod comment;
 
-#[derive(Deserialize, Serialize, Clone, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Clone, PartialEq, Eq, Debug)]
 pub struct Story {
     pub branches: Vec<Branch>,
     pub completed: bool,
