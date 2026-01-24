@@ -1,5 +1,4 @@
 use ratatui::layout::{Constraint, Direction};
-use reqwest::retry::Builder;
 
 use crate::view::{Pane, PaneTrait, View};
 

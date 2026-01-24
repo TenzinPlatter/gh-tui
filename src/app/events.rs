@@ -1,8 +1,7 @@
 use std::{
     env,
-    fs::{File, OpenOptions, create_dir_all, read_to_string},
+    fs::{OpenOptions, create_dir_all, read_to_string},
     io::{Stdout, stdout},
-    path::Path,
     process::Command,
 };
 
@@ -90,7 +89,11 @@ impl App {
 
                 dbg_file!("Opening note: {}", note.path.display());
 
-                let mut f = OpenOptions::new().create(true).read(true).write(true).open(&note.path)?;
+                let mut f = OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .read(true)
+                    .open(&note.path)?;
                 let buf = read_to_string(&note.path)?;
 
                 if buf.is_empty() {

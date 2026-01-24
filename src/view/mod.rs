@@ -1,7 +1,7 @@
 use ratatui::{
     buffer::Buffer,
     layout::{Direction, Layout, Rect},
-    widgets::{Widget, WidgetRef},
+    widgets::WidgetRef,
 };
 
 use crate::{
