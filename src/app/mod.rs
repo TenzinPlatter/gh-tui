@@ -6,6 +6,7 @@ use crate::{
     api::ApiClient, cache::Cache, config::Config, view::View
 };
 
+pub mod cmd;
 pub mod events;
 pub mod handlers;
 pub mod init;
