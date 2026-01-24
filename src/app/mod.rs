@@ -12,6 +12,7 @@ pub mod handlers;
 pub mod init;
 pub mod model;
 pub mod msg;
+pub mod pane;
 pub mod view;
 
 // Re-export AppEvent for convenience

@@ -1,0 +1,84 @@
+use crossterm::event::KeyEvent;
+
+use crate::{
+    api::story::Story,
+    app::{cmd::Cmd, msg::StoryListMsg},
+    keys::AppKey,
+};
+
+/// Story list pane UI state (re-exported from model for convenience)
+pub use crate::app::model::StoryListState;
+
+/// Update function for story list pane
+/// Takes current state, domain data, and message
+/// Returns commands to execute
+pub fn update(
+    state: &mut StoryListState,
+    stories: &[Story],
+    current_iteration: Option<&crate::api::iteration::Iteration>,
+    msg: StoryListMsg,
+) -> Vec<Cmd> {
+    match msg {
+        StoryListMsg::SelectNext => {
+            if stories.is_empty() {
+                return vec![Cmd::None];
+            }
+
+            state.selected_index = Some(match state.selected_index {
+                None => 0,
+                Some(idx) if idx >= stories.len() - 1 => 0, // Wrap around
+                Some(idx) => idx + 1,
+            });
+
+            vec![Cmd::None]
+        }
+
+        StoryListMsg::SelectPrev => {
+            if stories.is_empty() {
+                return vec![Cmd::None];
+            }
+
+            state.selected_index = Some(match state.selected_index {
+                None => 0,
+                Some(0) => stories.len() - 1, // Wrap around
+                Some(idx) => idx - 1,
+            });
+
+            vec![Cmd::None]
+        }
+
+        StoryListMsg::ToggleExpand => {
+            if let Some(idx) = state.selected_index {
+                if state.expanded_items.contains(&idx) {
+                    state.expanded_items.remove(&idx);
+                } else {
+                    state.expanded_items.insert(idx);
+                }
+            }
+            vec![Cmd::None]
+        }
+
+        StoryListMsg::OpenNote => {
+            if let Some(idx) = state.selected_index {
+                if let Some(story) = stories.get(idx) {
+                    return vec![Cmd::OpenNote {
+                        story: story.clone(),
+                        iteration: current_iteration.cloned(),
+                    }];
+                }
+            }
+            vec![Cmd::None]
+        }
+    }
+}
+
+/// Translate keyboard input to story list messages
+pub fn key_to_msg(key: KeyEvent) -> Option<StoryListMsg> {
+    match key.code.try_into() {
+        Ok(AppKey::Down) => Some(StoryListMsg::SelectNext),
+        Ok(AppKey::Up) => Some(StoryListMsg::SelectPrev),
+        Ok(AppKey::Select) => Some(StoryListMsg::ToggleExpand),
+        Ok(AppKey::Edit) => Some(StoryListMsg::OpenNote),
+        _ => None,
+    }
+}
