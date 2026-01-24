@@ -16,16 +16,19 @@ pub mod pane;
 pub mod update;
 pub mod view;
 
-// Re-export AppEvent for convenience
 pub use events::AppEvent;
 
 pub struct App {
-    pub view: View,
+    pub model: model::Model,
     pub exit: bool,
+    pub receiver: mpsc::UnboundedReceiver<msg::Msg>,
+    pub sender: mpsc::UnboundedSender<msg::Msg>,
     pub api_client: ApiClient,
-    pub reciever: mpsc::UnboundedReceiver<AppEvent>,
-    pub sender: mpsc::UnboundedSender<AppEvent>,
+    #[allow(dead_code)]
+    pub view: View,
+    #[allow(dead_code)]
     pub config: Config,
+    #[allow(dead_code)]
     pub cache: Cache,
 }
 

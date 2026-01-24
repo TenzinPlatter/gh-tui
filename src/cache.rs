@@ -10,7 +10,7 @@ use uuid::Uuid;
 
 use crate::{api::{iteration::Iteration, story::Story}, dbg_file};
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct Cache {
     pub current_iteration: Option<Iteration>,
     pub iteration_stories: Option<Vec<Story>>,

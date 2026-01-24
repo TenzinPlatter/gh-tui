@@ -3,7 +3,16 @@ use chrono::Utc;
 use tokio::sync::mpsc;
 
 use crate::{
-    api::{iteration::Iteration, ApiClient}, app::{events::AppEvent, App}, cache::Cache, config::Config, get_api_key, get_user_id
+    api::{iteration::Iteration, ApiClient},
+    app::{
+        model::{DataState, Model, UiState},
+        msg::Msg,
+        App,
+    },
+    cache::Cache,
+    config::Config,
+    get_api_key,
+    get_user_id,
 };
 
 impl App {
@@ -20,12 +29,21 @@ impl App {
         cache.user_id = Some(api_client.user_id);
         cache.write()?;
 
-        // Create channel for background tasks to communicate with main app
-        let (event_tx, event_rx) = mpsc::unbounded_channel();
-        let event_tx_clone = event_tx.clone();
+        let (sender, receiver) = mpsc::unbounded_channel();
+        let sender_clone = sender.clone();
 
-        // Start with a loading view
         let view = Self::get_loading_view_iteration();
+
+        let model = Model {
+            data: DataState {
+                stories: cache.iteration_stories.clone().unwrap_or_default(),
+                epics: vec![],
+                current_iteration: cache.current_iteration.clone(),
+            },
+            ui: UiState::default(),
+            config: config.clone(),
+            cache: cache.clone(),
+        };
 
         let api_client_clone = api_client.clone();
         let saved_iteration = cache.current_iteration.clone();
@@ -33,18 +51,17 @@ impl App {
         tokio::spawn(async move {
             let iteration = match get_current_iteration(saved_iteration, &api_client_clone).await {
                 Ok(it) => {
-                    let _ = event_tx.send(AppEvent::IterationLoaded(it.clone()));
+                    let _ = sender.send(Msg::IterationLoaded(it.clone()));
                     it
                 }
                 Err(e) => {
-                    let _ = event_tx.send(AppEvent::UnexpectedError(e));
+                    let _ = sender.send(Msg::Error(e.to_string()));
                     return;
                 }
             };
 
             if let Some(stories) = saved_stories {
-                // TODO: add something visual to show that we are still fetching stories from api
-                let _ = event_tx.send(AppEvent::StoriesLoaded((stories, true)));
+                let _ = sender.send(Msg::StoriesLoaded { stories, from_cache: true });
             }
 
             match api_client_clone
@@ -52,21 +69,22 @@ impl App {
                 .await
             {
                 Ok(stories) => {
-                    let _ = event_tx.send(AppEvent::StoriesLoaded((stories, false)));
+                    let _ = sender.send(Msg::StoriesLoaded { stories, from_cache: false });
                 }
                 Err(e) => {
-                    let _ = event_tx.send(AppEvent::UnexpectedError(e));
+                    let _ = sender.send(Msg::Error(e.to_string()));
                 }
             }
         });
 
         Ok(Self {
-            config,
-            view,
+            model,
             exit: false,
+            receiver,
+            sender: sender_clone,
             api_client,
-            reciever: event_rx,
-            sender: event_tx_clone,
+            view,
+            config,
             cache,
         })
     }
