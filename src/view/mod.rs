@@ -9,6 +9,7 @@ use crate::{
     keys::{AppKey, KeyHandler},
 };
 
+pub mod epic;
 pub mod story_list;
 
 mod section;

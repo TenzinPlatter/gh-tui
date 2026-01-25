@@ -85,7 +85,7 @@ impl App {
 
     fn draw(&self, frame: &mut Frame) {
         use ratatui::layout::{Constraint, Direction, Layout};
-        use crate::view::story_list::StoryListView;
+        use crate::view::{epic::EpicView, story_list::StoryListView};
 
         let chunks = Layout::default()
             .direction(Direction::Horizontal)
@@ -101,5 +101,11 @@ impl App {
             self.model.ui.focused_pane == model::PaneId::StoryList,
         );
         frame.render_widget_ref(story_list_view, chunks[0]);
+
+        let epic_view = EpicView::new(
+            &self.model.ui.epic_pane,
+            self.model.ui.focused_pane == model::PaneId::Epic,
+        );
+        frame.render_widget_ref(epic_view, chunks[1]);
     }
 }

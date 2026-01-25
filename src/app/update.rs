@@ -5,7 +5,7 @@ use crate::{
         cmd::Cmd,
         model::PaneId,
         msg::Msg,
-        pane::story_list,
+        pane::{epic, story_list},
         App,
     },
     keys::AppKey,
@@ -38,8 +38,8 @@ impl App {
                 story_msg,
             ),
 
-            Msg::Epic(_epic_msg) => {
-                vec![Cmd::None]
+            Msg::Epic(epic_msg) => {
+                epic::update(&mut self.model.ui.epic_pane, epic_msg)
             }
 
             Msg::StoriesLoaded { stories, from_cache } => {
