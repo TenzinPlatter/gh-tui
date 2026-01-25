@@ -1,7 +1,7 @@
 use crossterm::event::KeyEvent;
 
 use crate::{
-    api::story::Story,
+    api::{iteration::Iteration, story::Story},
     app::{cmd::Cmd, msg::StoryListMsg},
     keys::AppKey,
 };
@@ -11,7 +11,7 @@ pub use crate::app::model::StoryListState;
 pub fn update(
     state: &mut StoryListState,
     stories: &[Story],
-    current_iteration: Option<&crate::api::iteration::Iteration>,
+    current_iteration: Option<&Iteration>,
     msg: StoryListMsg,
 ) -> Vec<Cmd> {
     match msg {
