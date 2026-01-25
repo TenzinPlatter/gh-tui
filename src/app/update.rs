@@ -8,11 +8,14 @@ use crate::{
         pane::{epic, story_list},
         App,
     },
+    dbg_file,
     keys::AppKey,
 };
 
 impl App {
     pub fn update(&mut self, msg: Msg) -> Vec<Cmd> {
+        dbg_file!("Update: {:?}", msg);
+
         match msg {
             Msg::Quit => {
                 self.exit = true;
