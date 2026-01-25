@@ -4,20 +4,12 @@ use tokio::sync::mpsc;
 
 use crate::{api::ApiClient, app::model::ViewType, cache::Cache, config::Config};
 
-#[cfg(any())]
-use crate::view::View;
-
 pub mod cmd;
-#[cfg(any())]
-pub mod events;
-#[cfg(any())]
-pub mod handlers;
 pub mod init;
 pub mod model;
 pub mod msg;
 pub mod pane;
 pub mod update;
-pub mod view;
 
 pub struct App {
     pub model: model::Model,
@@ -25,12 +17,7 @@ pub struct App {
     pub receiver: mpsc::UnboundedReceiver<msg::Msg>,
     pub sender: mpsc::UnboundedSender<msg::Msg>,
     pub api_client: ApiClient,
-    #[cfg(any())]
-    #[allow(dead_code)]
-    pub view: View,
-    #[allow(dead_code)]
     pub config: Config,
-    #[allow(dead_code)]
     pub cache: Cache,
 }
 

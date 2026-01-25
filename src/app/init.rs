@@ -11,7 +11,7 @@ use crate::{
     },
     cache::Cache,
     config::Config,
-    get_api_key, get_user_id,
+    get_user_id,
 };
 
 impl App {
@@ -20,9 +20,8 @@ impl App {
         let mut cache = Cache::read(config.cache_dir.clone());
 
         let api_client = {
-            let api_key = get_api_key().await?;
-            let user_id = get_user_id(cache.user_id, &api_key).await?;
-            ApiClient::new(api_key, user_id)
+            let user_id = get_user_id(cache.user_id, &config.api_token).await?;
+            ApiClient::new(config.api_token.clone(), user_id)
         };
 
         cache.user_id = Some(api_client.user_id);

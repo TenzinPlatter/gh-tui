@@ -1,4 +1,3 @@
-use anyhow::Context;
 use ratatui::DefaultTerminal;
 use uuid::Uuid;
 
@@ -12,12 +11,6 @@ pub mod keys;
 pub mod macros;
 pub mod note;
 pub mod view;
-
-pub async fn get_api_key() -> anyhow::Result<String> {
-    std::env::var("SHORTCUT_API_TOKEN").context(
-        "Please set the SHORTCUT_API_TOKEN environment variable to authenticate with Shortcut",
-    )
-}
 
 pub async fn get_user_id(saved_user_id: Option<Uuid>, api_token: &str) -> anyhow::Result<Uuid> {
     let id = if let Some(id) = saved_user_id {

@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 pub struct Config {
     pub notes_dir: String,
     pub cache_dir: Option<String>,
+    pub api_token: String,
 }
 
 impl Config {
