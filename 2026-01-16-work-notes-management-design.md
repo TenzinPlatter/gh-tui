@@ -6,50 +6,50 @@
 ## Problem Statement
 
 Current notes setup has multiple pain points:
-- **Capture friction**: Deciding where to put notes and switching contexts slows down note-taking
-- **Context loss**: Notes lack connection to work context (tickets, iterations, epics)
-- **Disorganization**: Hard to find notes later when needed
+- **Context loss**: Notes lack structured connection to work context (tickets, iterations, epics)
+- **Disorganization**: Hard to browse and find notes related to specific work items
+- **Scattered information**: No unified view of tickets, notes, and tmux sessions
 
-Primary use cases are note capture during:
-- Meetings (need quick jotting while listening)
-- Coding sessions (bugs, TODOs, architecture thoughts)
-- Throughout the day (random thoughts, reminders)
+Primary use cases:
+- Maintaining context-rich notes for each ticket, epic, or iteration
+- Browsing work history and notes in an organized interface
+- Quickly accessing ticket-related information and notes
 
-Primary environments: terminal/nvim and browser.
+Primary environment: TUI application with Obsidian-compatible markdown editing in nvim.
 
 ## Solution Overview
 
-Build an integrated TUI workspace manager that tracks Shortcut tickets, manages tmux sessions, and provides fast note capture with automatic context tagging. Notes remain Obsidian-compatible markdown files with rich frontmatter for filtering.
+Build an integrated TUI workspace manager that tracks Shortcut tickets, manages tmux sessions, and maintains one note per work item (ticket/epic/iteration). Notes are Obsidian-compatible markdown files that open automatically when selecting work items in the TUI.
 
-**Core principle**: Optimize for capture speed by eliminating decisions and context switching.
+**Core principle**: Unified workspace where every work item has exactly one note, eliminating the need to hunt for or organize multiple related notes.
 
 ## System Architecture
 
 ### Component Diagram
 
 ```
-┌─────────────────┐      ┌──────────────┐      ┌─────────────┐
-│   CLI Command   │─────▶│  State File  │◀─────│  TUI App    │
-│   `note ...`    │      │  (JSON/TOML) │      │             │
-└─────────────────┘      └──────────────┘      └─────────────┘
-         │                      │                      │
-         │                      ▼                      │
-         │               ┌──────────────┐              │
-         └──────────────▶│ Notes Index  │◀─────────────┘
-                         │  (SQLite)    │
-                         └──────────────┘
-                                │
-                                ▼
-                         ┌──────────────┐
-                         │  Markdown    │
-                         │   Files      │
-                         └──────────────┘
-                                ▲
-                                │
-                         ┌──────────────┐
-                         │  Obsidian    │
-                         │    nvim      │
-                         └──────────────┘
+┌──────────────┐      ┌─────────────┐
+│  State File  │◀─────│  TUI App    │
+│  (JSON/TOML) │      │             │
+└──────────────┘      └─────────────┘
+                             │
+                             ▼
+                      ┌──────────────┐
+                      │ Notes Index  │
+                      │  (SQLite)    │
+                      └──────────────┘
+                             │
+                             ▼
+                      ┌──────────────┐
+                      │  Markdown    │
+                      │   Files      │
+                      └──────────────┘
+                             ▲
+                             │
+                      ┌──────────────┐
+                      │  $EDITOR     │
+                      │   (nvim)     │
+                      └──────────────┘
 
          ┌──────────────┐
          │  Shortcut    │
@@ -67,125 +67,149 @@ Build an integrated TUI workspace manager that tracks Shortcut tickets, manages 
 
 **1. TUI Application**
 Central workspace manager with three main views:
-- **Tickets view**: Browse Shortcut stories, set active ticket, create notes for tickets, manage tmux sessions
-- **Notes browser**: Filter/search notes by ticket, epic, iteration, date, type, tags. Opens notes in $EDITOR
-- **Sessions view**: List tmux sessions with ticket associations
+- **Tickets view**: Browse Shortcut stories, select ticket to open/create its note, manage tmux sessions
+- **Epics view**: Browse epics, select epic to open/create its note
+- **Iterations view**: Browse iterations, select iteration to open/create its note
+- **Notes browser**: Filter/search all notes by entity type, date, tags. Opens notes in $EDITOR
 
-**2. CLI Command**
-Fast note capture from anywhere:
-```bash
-note "quick thought"
-note --ticket sc-12345 "specific ticket note"
-note --type meeting
-```
-Reads current context from state file, creates note with auto-populated frontmatter.
-
-**3. State File** (`~/.config/worknotes/state.json`)
-Shared state between TUI and CLI:
-- Active ticket ID
-- Active epic ID
-- Current iteration number
+**2. State File** (`~/.config/worknotes/state.json`)
+Application configuration and state:
 - Shortcut workspace/API token
 - Ticket → tmux session mapping
 - Last sync timestamp
+- Notes directory path
+- Editor command ($EDITOR override)
 
-**4. Notes Index** (SQLite)
+**3. Notes Index** (SQLite)
 Fast searchable index of all notes:
-- Schema: `notes(id, path, created, ticket, epic, iteration, type, tags, title, content_preview)`
-- Indexed on: ticket, epic, iteration, type, created
+- Schema: `notes(id, entity_type, entity_id, path, created, updated, title, content_preview, tags)`
+- Indexed on: entity_type, entity_id, created, updated
 - Full-text search on title + content_preview
-- Rebuilt on TUI startup, updated on note creation
+- Rebuilt on TUI startup
 
-**5. Markdown Files**
-Obsidian-compatible notes with rich frontmatter:
-- Storage: `notes/YYYY/MM/DD-HHmmss-slug.md`
+**4. Markdown Files**
+Obsidian-compatible notes with simple frontmatter:
+- Storage: `notes/tickets/sc-12345-slug.md`, `notes/epics/sc-500-slug.md`, `notes/iterations/iter-25-slug.md`
 - Format: Standard markdown with YAML frontmatter
 - Compatible with existing Obsidian nvim setup
+- One note per entity (1:1 relationship)
 
 ## Data Model
 
 ### Note Frontmatter
 
+**For Ticket Notes:**
 ```yaml
 ---
-id: 2026-01-16-153042-auth-bug-fix
+entity_type: ticket
+entity_id: sc-12345
 created: 2026-01-16T15:30:42Z
-ticket: sc-12345
+updated: 2026-01-16T16:45:12Z
+title: "Auth Bug Fix"
 epic: sc-500
 iteration: 25
-type: code-note  # meeting, idea, todo
 tags: [auth, bug, backend]
-aliases: []
+---
+```
+
+**For Epic Notes:**
+```yaml
+---
+entity_type: epic
+entity_id: sc-500
+created: 2026-01-16T10:00:00Z
+updated: 2026-01-20T09:30:00Z
+title: "Authentication Refactor"
+tags: [auth, epic-planning]
+---
+```
+
+**For Iteration Notes:**
+```yaml
+---
+entity_type: iteration
+entity_id: 25
+created: 2026-01-13T09:00:00Z
+updated: 2026-01-26T17:00:00Z
+title: "Iteration 25"
+tags: [sprint-planning, retrospective]
 ---
 ```
 
 **Field Descriptions:**
-- `id`: Unique identifier (timestamp + slug)
-- `created`: ISO timestamp for chronological sorting
-- `ticket`: Shortcut story ID (optional, auto-populated from active ticket)
-- `epic`: Shortcut epic ID (optional, pulled from ticket via API)
-- `iteration`: Iteration number (from Shortcut or manual)
-- `type`: Note category for filtering (code-note, meeting, idea, todo)
+- `entity_type`: Type of work item (ticket, epic, or iteration)
+- `entity_id`: Shortcut ID or iteration number
+- `created`: ISO timestamp when note was first created
+- `updated`: ISO timestamp of last modification
+- `title`: Human-readable title (pulled from Shortcut or user-defined)
+- `epic`: Parent epic ID (for ticket notes only)
+- `iteration`: Iteration number (for ticket notes only)
 - `tags`: Free-form tags for additional organization
-- `aliases`: Alternative names for Obsidian wikilink resolution
 
 ### File Storage
 
-Simple chronological directory structure:
+Entity-based directory structure with 1:1 note relationship:
 ```
 notes/
-  2026/
-    01/
-      16-153042-auth-bug-fix.md
-      16-142230-backend-meeting.md
-    02/
-      ...
-  YYYY/
-    MM/
-      ...
+  tickets/
+    sc-12345-auth-bug-fix.md
+    sc-12346-api-refactor.md
+    sc-12347-ui-improvements.md
+  epics/
+    sc-500-authentication-refactor.md
+    sc-501-performance-optimization.md
+  iterations/
+    iter-25-sprint-planning.md
+    iter-26-sprint-planning.md
 ```
 
 Benefits:
-- Easy to browse by date if needed
+- Clear 1:1 relationship between entity and note
+- Predictable file paths (entity type + ID + slug)
+- Easy to navigate by work item type
 - Obsidian handles this structure fine
-- TUI index makes physical structure irrelevant for search
-- No complex directory decisions during capture
+- No duplicate or orphaned notes
 
 ## Workflows
 
-### Quick Capture from Terminal (Coding Flow)
+### Creating/Opening a Ticket Note
 
-```bash
-# User is debugging, finds issue
-$ note "auth token expiry set to 0 in dev config"
-# → Creates note with current ticket/epic/iteration from state file
-# → Returns immediately to terminal
-```
+1. Launch TUI application
+2. Browse tickets in tickets view
+3. Select a ticket (press `Enter` or navigate to it)
+4. TUI automatically:
+   - Checks if note exists at `notes/tickets/sc-12345-slug.md`
+   - If exists: opens the note in $EDITOR
+   - If not: creates note with frontmatter (entity_type, entity_id, title from Shortcut API, epic, iteration)
+   - Opens the newly created note in $EDITOR
+5. User edits note using Obsidian nvim features (wikilinks, etc.)
+6. Save and exit, return to TUI
+7. TUI index is rebuilt on next startup to reflect changes
 
-Process:
-1. CLI reads `~/.config/worknotes/state.json` for active ticket context
-2. Generates frontmatter with ticket, epic, iteration
-3. Creates file: `notes/2026/01/16-153042-auth-token-expiry.md`
-4. Updates SQLite index
-5. Returns control to user
+### Creating/Opening an Epic Note
 
-### Meeting Notes (TUI Flow)
+1. In TUI, switch to epics view
+2. Browse available epics
+3. Select an epic (press `Enter`)
+4. TUI automatically creates/opens `notes/epics/sc-500-slug.md`
+5. User edits note in $EDITOR
+6. Save and exit, return to TUI
 
-1. Switch to TUI (tmux hotkey or command)
-2. Active ticket is highlighted in tickets pane
-3. Press `n` for new note
-4. TUI prompts for type: (m)eeting, (c)ode, (i)dea, (t)odo
-5. Press `m` for meeting
-6. TUI creates note with frontmatter, opens in $EDITOR
-7. User writes meeting notes using Obsidian nvim features (wikilinks, etc.)
-8. Save and exit, return to TUI
+### Creating/Opening an Iteration Note
 
-### Finding Old Notes
+1. In TUI, switch to iterations view
+2. Browse iterations (current, past, upcoming)
+3. Select an iteration (press `Enter`)
+4. TUI automatically creates/opens `notes/iterations/iter-25-slug.md`
+5. User edits note in $EDITOR
+6. Save and exit, return to TUI
+
+### Browsing and Searching Notes
 
 1. In TUI, switch to notes browser view
 2. Press `/` to enter filter mode
-3. Type filter: `ticket:sc-12345 type:meeting`
-4. Browse filtered list
+3. Type filter: `entity:ticket` or `entity:epic` or search by tags
+4. Browse filtered list chronologically
 5. Press `Enter` on note to open in $EDITOR
 6. Wikilinks work as normal in Obsidian nvim
 
@@ -212,27 +236,29 @@ Process:
 
 ## Benefits
 
-**Eliminates capture friction:**
-- No decision fatigue (where to put this note?)
-- No context switching (CLI from anywhere, TUI from workspace)
-- Auto-populated metadata (ticket, epic, iteration from current context)
+**Eliminates note organization complexity:**
+- One note per work item (no duplicate or scattered notes)
+- Predictable file locations (always know where to find ticket/epic/iteration notes)
+- Automatic note creation on selection (no manual file creation)
+- Clear entity-based directory structure
 
-**Rich organization without effort:**
-- All notes tagged with work context automatically
-- Filter by any dimension: ticket, epic, iteration, time, type
+**Rich browsing and search:**
+- Filter by entity type (tickets, epics, iterations)
 - Full-text search across all notes
-- Multiple views of the same data
+- Multiple views of work items and their associated notes
+- Chronological browsing within entity types
 
 **Obsidian compatibility:**
 - Existing nvim setup continues to work
 - Wikilinks function normally
 - Can use Obsidian graph view, backlinks, etc.
-- Just adds metadata, doesn't break anything
+- Just adds structured metadata, doesn't break anything
 
-**Integrated workflow:**
-- Tickets, sessions, and notes in one interface
+**Integrated workspace:**
+- Tickets, notes, and tmux sessions in one interface
 - Tmux sessions tied to tickets
-- Context always available, never hunting for info
+- Work context always visible
+- Seamless navigation between work items and their notes
 
 ## Implementation Considerations
 
