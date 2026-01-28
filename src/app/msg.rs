@@ -14,7 +14,7 @@ pub enum Msg {
     EpicsLoaded(Vec<Epic>),
     IterationLoaded(Iteration),
     SwitchToView(ViewType),
-    NoteOpened(Story),
+    NoteOpened,
     CacheWritten,
     Error(String),
     Quit,
@@ -26,4 +26,5 @@ pub enum StoryListMsg {
     SelectPrev,
     ToggleExpand,
     OpenNote,
+    SelectStory,
 }

@@ -1,9 +1,7 @@
 use crossterm::event::KeyEvent;
 
 use crate::{
-    api::{iteration::Iteration, story::Story},
-    app::{cmd::Cmd, msg::StoryListMsg},
-    keys::AppKey,
+    api::{iteration::Iteration, story::Story}, app::{cmd::Cmd, msg::StoryListMsg}, dbg_file, keys::AppKey
 };
 
 pub use crate::app::model::StoryListState;
@@ -55,9 +53,7 @@ pub fn update(
         }
 
         StoryListMsg::OpenNote => {
-            if let Some(idx) = state.selected_index
-                && let Some(story) = stories.get(idx)
-            {
+            if let Some(story) = get_selected_story(state, stories) {
                 return vec![Cmd::OpenNote {
                     story: story.clone(),
                     iteration: current_iteration.cloned(),
@@ -65,6 +61,20 @@ pub fn update(
             }
             vec![Cmd::None]
         }
+
+        StoryListMsg::SelectStory => {
+            let story = get_selected_story(state, stories);
+            dbg_file!("Setting story: {:?} to active", story);
+            vec![Cmd::SelectStory(story), Cmd::WriteCache]
+        }
+    }
+}
+
+fn get_selected_story(state: &StoryListState, stories: &[Story]) -> Option<Story> {
+    if let Some(idx) = state.selected_index {
+        stories.get(idx).cloned()
+    } else {
+        None
     }
 }
 
@@ -74,6 +84,7 @@ pub fn key_to_msg(key: KeyEvent) -> Option<StoryListMsg> {
         Ok(AppKey::Up) => Some(StoryListMsg::SelectPrev),
         Ok(AppKey::Select) => Some(StoryListMsg::ToggleExpand),
         Ok(AppKey::Edit) => Some(StoryListMsg::OpenNote),
+        Ok(AppKey::SetActive) => Some(StoryListMsg::SelectStory),
         _ => None,
     }
 }

@@ -63,11 +63,10 @@ impl App {
                 vec![Cmd::None]
             }
 
-            Msg::NoteOpened(story) => {
-                // TODO: also update the UI
-                self.model.cache.current_story = Some(story);
-                vec![Cmd::WriteCache]
+            Msg::NoteOpened => {
+                vec![Cmd::None]
             },
+
             Msg::CacheWritten => vec![Cmd::None],
 
             Msg::Error(e) => {

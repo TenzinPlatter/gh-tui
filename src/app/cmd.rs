@@ -34,6 +34,7 @@ pub enum Cmd {
         iteration: Iteration,
     },
     FetchEpics,
+    SelectStory(Option<Story>),
     Batch(Vec<Cmd>),
 }
 
@@ -50,7 +51,7 @@ pub async fn execute(
 
         Cmd::OpenNote { story, iteration } => {
             open_note_in_editor_tui(story.clone(), iteration, config, terminal)?;
-            sender.send(Msg::NoteOpened(story)).ok();
+            sender.send(Msg::NoteOpened).ok();
             Ok(())
         }
 
@@ -85,6 +86,11 @@ pub async fn execute(
 
         Cmd::FetchEpics => {
             dbg_file!("FetchEpics not yet implemented");
+            Ok(())
+        }
+
+        Cmd::SelectStory(story) => {
+            cache.current_story = story;
             Ok(())
         }
 
