@@ -1,6 +1,6 @@
 use std::{
     env,
-    fs::{File, remove_file},
+    fs::{self, File, remove_file},
     io::{Read, Write},
     path::{Path, PathBuf},
 };
@@ -36,6 +36,7 @@ impl Cache {
     fn default_cache_dir() -> PathBuf {
         let mut base = env::home_dir().expect("Couldn't find home dir");
         base.push(".cache");
+        base.push("shortcut-notes");
         base
     }
 
@@ -54,6 +55,19 @@ impl Cache {
         dbg_file!("Using {} as cache_dir", cache_dir.display());
 
         let cache_file = Self::get_cache_file(&cache_dir);
+
+        if let Some(parent) = cache_file.parent()
+            && !parent.exists()
+            && let Err(e) = fs::create_dir_all(parent)
+        {
+            dbg_file!(
+                "Failed to create cache dir parent at: {} with err: {}",
+                parent.display(),
+                e
+            );
+
+            return Self::default();
+        }
 
         let contents = match read_file(&cache_file) {
             Ok(contents) => contents,

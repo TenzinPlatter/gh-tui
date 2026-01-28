@@ -30,6 +30,7 @@ impl App {
                 from_cache,
             } => {
                 if !from_cache
+                    && self.model.data.stories.len() == stories.len()
                     && self
                         .model
                         .data
