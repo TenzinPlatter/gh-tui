@@ -46,19 +46,11 @@ impl Frontmatter {
     pub fn new(story: &Story, current_iteration: Option<&Iteration>) -> Self {
         let slug = slugify!(&story.name);
         let now = Utc::now();
-        let slug_id = format!(
-            "{}{}{}{}-{}",
-            now.day(),
-            now.hour(),
-            now.minute(),
-            now.second(),
-            &slug
-        );
 
         let iteration_link = current_iteration.map(|it| it.app_url.clone());
 
         Self {
-            slug_id,
+            slug_id: slug,
 
             story_id: format!("sc-{}", story.id),
             story_name: story.name.clone(),

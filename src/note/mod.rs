@@ -4,7 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use chrono::{Datelike, Utc};
+use chrono::Utc;
 
 use crate::{
     api::{iteration::Iteration, story::Story},
