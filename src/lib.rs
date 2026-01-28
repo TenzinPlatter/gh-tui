@@ -42,7 +42,7 @@ pub async fn run(terminal: &mut DefaultTerminal) -> anyhow::Result<()> {
 pub fn handle_command(command: Commands, cache: Cache, config: Config) -> anyhow::Result<()> {
     match command {
         Commands::Open => {
-            if let Some(story) = cache.current_story {
+            if let Some(story) = cache.active_story {
                 open_note_in_editor(story, cache.current_iteration, &config)?;
             } else {
                 anyhow::bail!("You do not have a currently active story");

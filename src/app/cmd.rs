@@ -13,6 +13,7 @@ use std::{
 };
 use tokio::sync::mpsc::UnboundedSender;
 
+use crate::app::model::Model;
 use crate::{
     api::{ApiClient, iteration::Iteration, story::Story},
     app::msg::Msg,
@@ -41,8 +42,7 @@ pub enum Cmd {
 pub async fn execute(
     cmd: Cmd,
     sender: UnboundedSender<Msg>,
-    config: &Config,
-    cache: &mut Cache,
+    model: &mut Model,
     api_client: &ApiClient,
     terminal: &mut Terminal<CrosstermBackend<Stdout>>,
 ) -> Result<()> {
@@ -50,14 +50,14 @@ pub async fn execute(
         Cmd::None => Ok(()),
 
         Cmd::OpenNote { story, iteration } => {
-            open_note_in_editor_tui(story.clone(), iteration, config, terminal)?;
+            open_note_in_editor_tui(story.clone(), iteration, &model.config, terminal)?;
             sender.send(Msg::NoteOpened).ok();
             Ok(())
         }
 
         Cmd::WriteCache => {
-            dbg_file!("Writing cache with: {:?}", cache.current_story);
-            cache.write()?;
+            dbg_file!("Writing cache with: {:?}", model.cache.active_story);
+            model.cache.write()?;
             sender.send(Msg::CacheWritten).ok();
             Ok(())
         }
@@ -90,21 +90,23 @@ pub async fn execute(
         }
 
         Cmd::SelectStory(story) => {
-            cache.current_story = story;
+            if let Some(active_story) = &model.ui.story_list.active_story
+            && let Some(story) = &story
+                && active_story.id == story.id
+            {
+                model.cache.active_story = None;
+                model.ui.story_list.active_story = None;
+            } else {
+                model.ui.story_list.active_story = story.clone();
+                model.cache.active_story = story;
+            }
+
             Ok(())
         }
 
         Cmd::Batch(commands) => {
             for cmd in commands {
-                Box::pin(execute(
-                    cmd,
-                    sender.clone(),
-                    config,
-                    cache,
-                    api_client,
-                    terminal,
-                ))
-                .await?;
+                Box::pin(execute(cmd, sender.clone(), model, api_client, terminal)).await?;
             }
             Ok(())
         }

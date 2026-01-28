@@ -33,7 +33,12 @@ impl<'a> WidgetRef for StoryListView<'a> {
             .enumerate()
             .map(|(idx, story)| {
                 let is_expanded = self.state.expanded_items.contains(&idx);
-                story.into_list_item(is_expanded)
+                let selected = match &self.state.active_story {
+                    Some(active_story) => active_story.id == story.id,
+                    None => false,
+                };
+
+                story.into_list_item(is_expanded, selected)
             })
             .collect();
 

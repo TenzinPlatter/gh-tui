@@ -1,5 +1,5 @@
 use anyhow::Context;
-use ratatui::{style::Style, text::Line, widgets::ListItem};
+use ratatui::{style::{Color, Style}, text::Line, widgets::ListItem};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -60,7 +60,7 @@ impl ApiClient {
 }
 
 impl Story {
-    pub fn into_list_item(&self, expanded: bool) -> ListItem<'static> {
+    pub fn into_list_item(&self, expanded: bool, selected: bool) -> ListItem<'static> {
         let mut text = vec![
             Line::from(self.name.to_string()),
             Line::from("Description:"),
@@ -82,7 +82,13 @@ impl Story {
 
         text.push(Line::from(""));
 
-        ListItem::new(text)
+        let style = if selected {
+            Style::default().reversed()
+        } else {
+            Style::default()
+        };
+
+        ListItem::new(text).style(style)
     }
 
     pub fn get_file_name(&self) -> String {

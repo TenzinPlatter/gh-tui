@@ -32,8 +32,7 @@ impl App {
                     cmd::execute(
                         cmd,
                         self.sender.clone(),
-                        &self.model.config,
-                        &mut self.model.cache,
+                        &mut self.model,
                         &self.api_client,
                         terminal,
                     )
@@ -97,8 +96,10 @@ impl App {
                     &self.model.ui.story_list,
                     true,  // Always focused (single view)
                 );
+
                 frame.render_widget_ref(story_list_view, chunks[1]);
             }
+
             ViewType::Epics
             | ViewType::Notes
             | ViewType::Search => {

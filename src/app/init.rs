@@ -36,7 +36,7 @@ impl App {
                 epics: vec![],
                 current_iteration: cache.current_iteration.clone(),
             },
-            ui: UiState::default(),
+            ui: UiState::new(cache.active_story.clone()),
             config: config.clone(),
             cache,
         };
