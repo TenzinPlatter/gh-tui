@@ -24,12 +24,13 @@ impl Note {
         story: &Story,
         current_iteration: Option<&Iteration>,
     ) -> Self {
-        let now = Utc::now();
+        let _now = Utc::now();
 
         let frontmatter = Frontmatter::new(story, current_iteration);
         let mut path = PathBuf::from(notes_dir.as_ref());
-        path.push(format!("{}", now.year()));
-        path.push(format!("{}", now.month()));
+        // TODO: date + don't create a new note at each time
+        // path.push(format!("{}", now.year()));
+        // path.push(format!("{}", now.month()));
         path.push(format!("{}.md", &frontmatter.slug_id));
 
         Self { frontmatter, path }
