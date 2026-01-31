@@ -20,6 +20,7 @@ pub mod config;
 pub mod keys;
 pub mod macros;
 pub mod note;
+pub mod tmux;
 pub mod view;
 
 pub async fn get_user_id(saved_user_id: Option<Uuid>, api_token: &str) -> anyhow::Result<Uuid> {

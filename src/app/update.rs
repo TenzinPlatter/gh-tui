@@ -69,8 +69,8 @@ impl App {
 
             Msg::CacheWritten => vec![Cmd::None],
 
-            Msg::Error(e) => {
-                eprintln!("Error: {:?}", e);
+            Msg::Error(_e) => {
+                // TODO: notification popup
                 vec![Cmd::None]
             }
         }

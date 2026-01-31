@@ -42,21 +42,17 @@ impl Cache {
         base
     }
 
-    fn get_cache_file(cache_dir: &Path) -> PathBuf {
-        let mut clone = cache_dir.to_path_buf();
-        clone.push("cache.json");
-        clone
+    fn get_cache_file(mut cache_dir: PathBuf) -> PathBuf {
+        cache_dir.push("cache.json");
+        cache_dir
     }
 
-    pub fn read(cache_dir: Option<String>) -> Self {
-        let cache_dir: PathBuf = match cache_dir {
-            Some(cache_dir) => cache_dir.into(),
-            None => Self::default_cache_dir(),
-        };
+    pub fn read(cache_dir: Option<PathBuf>) -> Self {
+        let cache_dir = cache_dir.unwrap_or_else(Self::default_cache_dir);
 
         dbg_file!("Using {} as cache_dir", cache_dir.display());
 
-        let cache_file = Self::get_cache_file(&cache_dir);
+        let cache_file = Self::get_cache_file(cache_dir);
 
         if let Some(parent) = cache_file.parent()
             && !parent.exists()
@@ -91,7 +87,7 @@ impl Cache {
     }
 
     pub fn write(&self) -> anyhow::Result<()> {
-        let cache_file = Self::get_cache_file(&self.cache_dir);
+        let cache_file = Self::get_cache_file(self.cache_dir.clone());
         let mut f = File::create(cache_file)?;
         f.write_all(&serde_json::to_string(self)?.into_bytes())?;
 
