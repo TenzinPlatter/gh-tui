@@ -69,8 +69,8 @@ impl App {
 
             Msg::CacheWritten => vec![Cmd::None],
 
-            Msg::Error(_e) => {
-                // TODO: notification popup
+            Msg::Error(e) => {
+                self.model.ui.error_info = Some(e);
                 vec![Cmd::None]
             }
         }

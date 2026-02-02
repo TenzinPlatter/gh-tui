@@ -69,6 +69,6 @@ impl<'a> WidgetRef for StoryListView<'a> {
         let mut list_state = ListState::default();
         list_state.select(self.state.selected_index);
 
-        StatefulWidget::render(custom_list, inner, buf, &mut list_state);
+        custom_list.render(inner, buf, &mut list_state);
     }
 }

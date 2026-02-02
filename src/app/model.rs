@@ -4,6 +4,7 @@ use crate::{
     api::{epic::Epic, iteration::Iteration, story::Story},
     cache::Cache,
     config::Config,
+    error::ErrorInfo,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -61,12 +62,14 @@ pub struct DataState {
 pub struct UiState {
     pub active_view: ViewType,
     pub story_list: StoryListState,
+    pub error_info: Option<ErrorInfo>,
 }
 
 impl UiState {
     pub fn new(active_story: Option<Story>) -> UiState {
         Self {
             active_view: Default::default(),
+            error_info: None,
             story_list: StoryListState {
                 selected_index: Some(0),
                 expanded_items: Default::default(),

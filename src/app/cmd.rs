@@ -14,6 +14,7 @@ use std::{
 use tokio::sync::mpsc::UnboundedSender;
 
 use crate::app::model::Model;
+use crate::error::ErrorInfo;
 use crate::tmux::{session_attach, session_create};
 use crate::{
     api::{ApiClient, iteration::Iteration, story::Story},
@@ -78,7 +79,12 @@ pub async fn execute(
                             .ok();
                     }
                     Err(e) => {
-                        sender.send(Msg::Error(e.to_string())).ok();
+                        let info = ErrorInfo::new(
+                            "Failed to get stories for current iteration".to_string(),
+                            e.to_string(),
+                        );
+
+                        sender.send(Msg::Error(info)).ok();
                     }
                 }
             });
@@ -92,7 +98,7 @@ pub async fn execute(
 
         Cmd::SelectStory(story) => {
             if let Some(active_story) = &model.ui.story_list.active_story
-            && let Some(story) = &story
+                && let Some(story) = &story
                 && active_story.id == story.id
             {
                 model.cache.active_story = None;

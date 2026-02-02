@@ -2,6 +2,7 @@ use crossterm::event::KeyEvent;
 
 use crate::api::{epic::Epic, iteration::Iteration, story::Story};
 use crate::app::model::ViewType;
+use crate::error::ErrorInfo;
 
 #[derive(Debug, Clone)]
 pub enum Msg {
@@ -16,7 +17,7 @@ pub enum Msg {
     SwitchToView(ViewType),
     NoteOpened,
     CacheWritten,
-    Error(String),
+    Error(ErrorInfo),
     Quit,
 }
 

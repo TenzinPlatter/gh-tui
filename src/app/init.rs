@@ -11,6 +11,8 @@ use crate::{
     },
     cache::Cache,
     config::Config,
+    dummy,
+    error::ErrorInfo,
     get_user_id,
 };
 
@@ -18,6 +20,10 @@ impl App {
     pub async fn init() -> Result<Self> {
         let config = Config::read()?;
         let mut cache = Cache::read(config.cache_dir.clone());
+
+        if dummy::is_enabled() {
+            return Self::init_with_dummy_data(config, cache).await;
+        }
 
         let api_client = {
             let user_id = get_user_id(cache.user_id, &config.api_token).await?;
@@ -51,7 +57,12 @@ impl App {
                     it
                 }
                 Err(e) => {
-                    let _ = sender.send(Msg::Error(e.to_string()));
+                    let info = ErrorInfo::new(
+                        "Failed to fetch current iteration info".to_string(),
+                        e.to_string(),
+                    );
+
+                    let _ = sender.send(Msg::Error(info));
                     return;
                 }
             };
@@ -74,9 +85,57 @@ impl App {
                     });
                 }
                 Err(e) => {
-                    let _ = sender.send(Msg::Error(e.to_string()));
+                    let info = ErrorInfo::new(
+                        "Failed to get stories for current iteration".to_string(),
+                        e.to_string(),
+                    );
+
+                    let _ = sender.send(Msg::Error(info));
                 }
             }
+        });
+
+        Ok(Self {
+            model,
+            exit: false,
+            receiver,
+            sender: sender_clone,
+            api_client,
+            config,
+        })
+    }
+
+    /// HACK: Initialize with dummy data for development. Remove when done.
+    async fn init_with_dummy_data(config: Config, mut cache: Cache) -> Result<Self> {
+        use uuid::Uuid;
+
+        let dummy_user_id = Uuid::nil();
+        let api_client = ApiClient::new(config.api_token.clone(), dummy_user_id);
+
+        cache.user_id = Some(dummy_user_id);
+
+        let (sender, receiver) = mpsc::unbounded_channel();
+        let sender_clone = sender.clone();
+
+        let iteration = dummy::iteration();
+        let stories = dummy::stories();
+
+        let model = Model {
+            data: DataState {
+                stories: stories.clone(),
+                epics: vec![],
+                current_iteration: Some(iteration.clone()),
+            },
+            ui: UiState::new(None),
+            config: config.clone(),
+            cache,
+        };
+
+        // Send messages so UI updates as if data loaded normally
+        let _ = sender.send(Msg::IterationLoaded(iteration));
+        let _ = sender.send(Msg::StoriesLoaded {
+            stories,
+            from_cache: false,
         });
 
         Ok(Self {
