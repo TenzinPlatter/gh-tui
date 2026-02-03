@@ -5,8 +5,9 @@ use ratatui::{
     style::Style,
     widgets::{Block, BorderType, Paragraph, Widget, WidgetRef, Wrap},
 };
+use unicode_ellipsis::truncate_str;
 
-use crate::text_utils::{count_wrapped_lines, truncate_to_lines};
+use crate::{dbg_file, text_utils::{count_wrapped_lines, truncate_to_lines}};
 
 const ERROR_NOTIFICATION_WINDOW_MAX_WIDTH: u16 = 50;
 const ERROR_NOTIFICATION_MAX_TEXT_HEIGHT: u16 = 3;
@@ -60,7 +61,9 @@ impl WidgetRef for ErrorInfo {
     #[doc = " Draws the current state of the widget in the given buffer. That is the only method required"]
     #[doc = " to implement a custom widget."]
     fn render_ref(&self, area: Rect, buf: &mut Buffer) {
-        let truncated_title = truncate(&self.short, ERROR_NOTIFICATION_WINDOW_MAX_WIDTH as usize);
+        let title_width = (ERROR_NOTIFICATION_WINDOW_MAX_WIDTH as usize) - 2;
+        let truncated_title = truncate_str(&self.short, title_width);
+        dbg_file!("{}", truncated_title);
         let inner_width = area.width.saturating_sub(2) as usize;
         let display_text = truncate_to_lines(
             &self.long,
@@ -78,15 +81,5 @@ impl WidgetRef for ErrorInfo {
             .wrap(Wrap { trim: true })
             .block(block)
             .render(area, buf);
-    }
-}
-
-fn truncate(s: &str, max_width: usize) -> String {
-    if s.len() <= max_width {
-        s.to_string()
-    } else if max_width <= 3 {
-        ".".repeat(max_width)
-    } else {
-        format!("{}...", &s[..max_width - 3])
     }
 }

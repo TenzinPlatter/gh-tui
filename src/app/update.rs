@@ -70,7 +70,7 @@ impl App {
             Msg::CacheWritten => vec![Cmd::None],
 
             Msg::Error(e) => {
-                self.model.ui.error_info = Some(e);
+                self.model.ui.errors.push(e);
                 vec![Cmd::None]
             }
         }

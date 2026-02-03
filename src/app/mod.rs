@@ -111,24 +111,24 @@ impl App {
     }
 
     fn draw_error(&self, frame: &mut Frame) {
-        if self.model.ui.error_info.is_none() {
-            return;
+        let mut used_height = 0;
+        for error in self.model.ui.errors.iter().filter(|e| !e.is_expired()) {
+            let width = error.get_required_width();
+            let height = error.get_required_height(width);
+            let area = frame.area();
+            let area = Rect::new(
+                area.width - width,
+                used_height,
+                width,
+                height.min(ERROR_NOTIFICATION_MAX_HEIGHT),
+            );
+
+            used_height += height;
+
+            // clear terminal area, stops characters behind empty space from being visible
+            frame.render_widget(Clear, area);
+
+            error.render_ref(area, frame.buffer_mut());
         }
-
-        let error_info = self.model.ui.error_info.as_ref().unwrap().clone();
-        let width = error_info.get_required_width();
-        let height = error_info.get_required_height(width);
-        let area = frame.area();
-        let area = Rect::new(
-            area.width - width,
-            0,
-            width,
-            height.min(ERROR_NOTIFICATION_MAX_HEIGHT),
-        );
-
-        // clear terminal area, stops characters behind empty space from being visible
-        frame.render_widget(Clear, area);
-
-        error_info.render_ref(area, frame.buffer_mut());
     }
 }

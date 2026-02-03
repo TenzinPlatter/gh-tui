@@ -105,7 +105,6 @@ impl App {
         })
     }
 
-    /// HACK: Initialize with dummy data for development. Remove when done.
     async fn init_with_dummy_data(config: Config, mut cache: Cache) -> Result<Self> {
         use uuid::Uuid;
 

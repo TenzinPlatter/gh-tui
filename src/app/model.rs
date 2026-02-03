@@ -62,14 +62,14 @@ pub struct DataState {
 pub struct UiState {
     pub active_view: ViewType,
     pub story_list: StoryListState,
-    pub error_info: Option<ErrorInfo>,
+    pub errors: Vec<ErrorInfo>,
 }
 
 impl UiState {
     pub fn new(active_story: Option<Story>) -> UiState {
         Self {
             active_view: Default::default(),
-            error_info: Default::default(),
+            errors: vec![ErrorInfo::new("hi there", "hello!")],
             story_list: StoryListState {
                 selected_index: Some(0),
                 expanded_items: Default::default(),
