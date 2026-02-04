@@ -2,6 +2,11 @@
 
 - [x] notes system
 - [x] move cache out of ~/.config
-- [ ] add borders between list items (this requires rewriting the List widget :( )
+- [x] add borders between list items (this requires rewriting the List widget :( )
 - [x] implement tmux session management tied to ticket
 - [ ] add worktree integration
+- add shortcut integration:
+  - [ ] Edit ticket description
+  - [ ] Edit ticket comments
+  - [ ] Change ticket state
+  - [ ] TODO: add points for epic/iteration integration
