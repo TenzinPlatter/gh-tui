@@ -72,7 +72,7 @@ impl UiState {
             errors: vec![ErrorInfo::new("hi there", "hello!")],
             story_list: StoryListState {
                 selected_index: Some(0),
-                expanded_items: Default::default(),
+                expanded_items: HashSet::default(),
                 active_story,
             },
         }

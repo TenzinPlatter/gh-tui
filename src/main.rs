@@ -7,9 +7,7 @@ async fn main() -> anyhow::Result<()> {
     if let Some(cmd) = args.command {
         let config = Config::read()?;
         let cache = Cache::read(config.cache_dir.clone());
-
         shortcut_notes::handle_command(cmd, cache, config).await?;
-
         return Ok(());
     }
 

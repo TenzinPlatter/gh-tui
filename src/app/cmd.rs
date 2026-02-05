@@ -1,4 +1,4 @@
-use std::io::Stdout;
+use std::io::{Stdout, Write};
 
 use anyhow::Result;
 use crossterm::ExecutableCommand;
@@ -11,6 +11,8 @@ use std::{
     fs::{OpenOptions, create_dir_all, read_to_string},
     process::Command as ProcessCommand,
 };
+use tempfile::NamedTempFile;
+use tokio::process::Command;
 use tokio::sync::mpsc::UnboundedSender;
 
 use crate::app::model::Model;
@@ -35,6 +37,7 @@ pub enum Cmd {
     FetchStories {
         iteration: Iteration,
     },
+    EditStoryContent(Story),
     FetchEpics,
     SelectStory(Option<Story>),
     OpenTmuxSession(String),
@@ -123,6 +126,31 @@ pub async fn execute(
             open_tmux_session(&name).await?;
             Ok(())
         }
+
+        Cmd::EditStoryContent(story) => {
+            // NOTE: this only works for editors that run from their process, i.e. code spawns the
+            // vscode gui, then ends itself, will not work as it is now
+            let mut tempfile = NamedTempFile::new()?;
+            tempfile.write_all(story.description.as_bytes())?;
+
+            let tmp_path = tempfile.path();
+
+            std::io::stdout().execute(LeaveAlternateScreen)?;
+            disable_raw_mode()?;
+
+            ProcessCommand::new(&model.config.editor)
+                .arg(tmp_path)
+                .status()?;
+
+            std::io::stdout().execute(EnterAlternateScreen)?;
+            enable_raw_mode()?;
+            terminal.clear()?;
+
+
+            // TODO: update story description
+
+            Ok(())
+        }
     }
 }
 
@@ -132,8 +160,6 @@ pub fn open_note_in_editor(
     config: &Config,
 ) -> anyhow::Result<()> {
     let note = Note::new(&config.notes_dir, &story, iteration.as_ref());
-
-    let editor = env::var("EDITOR").unwrap_or("nvim".to_string());
 
     if note.path.is_dir() {
         anyhow::bail!("Note path: {} is not a file", note.path.display());
@@ -157,7 +183,9 @@ pub fn open_note_in_editor(
         note.write_frontmatter(&mut f)?;
     }
 
-    ProcessCommand::new(editor).arg(note.path).status()?;
+    ProcessCommand::new(&config.editor)
+        .arg(note.path)
+        .status()?;
 
     Ok(())
 }

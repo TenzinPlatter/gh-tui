@@ -80,6 +80,14 @@ pub fn update(
                 vec![Cmd::None]
             }
         }
+
+        StoryListMsg::EditStoryContents => {
+            if let Some(story) = get_selected_story(state, stories) {
+                vec![Cmd::EditStoryContent(story.clone())]
+            } else {
+                vec![Cmd::None]
+            }
+        }
     }
 }
 
@@ -99,6 +107,7 @@ pub fn key_to_msg(key: KeyEvent) -> Option<StoryListMsg> {
         Ok(AppKey::Edit) => Some(StoryListMsg::OpenNote),
         Ok(AppKey::SetActive) => Some(StoryListMsg::SelectStory),
         Ok(AppKey::TmuxEnter) => Some(StoryListMsg::TmuxEnter),
+        Ok(AppKey::EditNoteContents) => Some(StoryListMsg::EditStoryContents),
         _ => None,
     }
 }

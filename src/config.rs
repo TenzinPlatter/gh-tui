@@ -1,4 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::{
+    env,
+    path::{Path, PathBuf},
+};
 
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
@@ -8,6 +11,7 @@ pub struct Config {
     pub notes_dir: PathBuf,
     pub cache_dir: Option<PathBuf>,
     pub api_token: String,
+    pub editor: String,
 }
 
 #[derive(Deserialize, Serialize, Default, Clone)]
@@ -31,10 +35,13 @@ impl Config {
             expand_tilde(&cache_dir)
         });
 
+        let editor = env::var("EDITOR").context("$EDITOR is not set")?;
+
         Ok(Config {
             notes_dir,
             cache_dir,
             api_token: config.api_token,
+            editor,
         })
     }
 

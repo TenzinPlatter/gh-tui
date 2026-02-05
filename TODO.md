@@ -5,6 +5,7 @@
 - [x] add borders between list items (this requires rewriting the List widget :( )
 - [x] implement tmux session management tied to ticket
 - [ ] add worktree integration
+- [ ] Refactor msgs/cmds to not take entire Story/Iteration objects, just what is needed to avoid cloning everything
 - add shortcut integration:
   - [ ] Edit ticket description
   - [ ] Edit ticket comments

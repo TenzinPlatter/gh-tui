@@ -24,6 +24,7 @@ pub enum AppKey {
     BackTab,
     SetActive,
     TmuxEnter,
+    EditNoteContents,
 }
 
 impl AppKey {
@@ -42,6 +43,7 @@ impl AppKey {
             AppKey::BackTab => KeyCode::BackTab,
             AppKey::SetActive => KeyCode::Char('a'),
             AppKey::TmuxEnter => KeyCode::Char('t'),
+            AppKey::EditNoteContents => KeyCode::Char('e'),
         }
     }
 }
@@ -63,6 +65,7 @@ impl TryFrom<KeyCode> for AppKey {
             KeyCode::BackTab => Ok(AppKey::BackTab),
             KeyCode::Char('a') => Ok(AppKey::SetActive),
             KeyCode::Char('t') => Ok(AppKey::TmuxEnter),
+            KeyCode::Char('e') => Ok(AppKey::EditNoteContents),
             _ => Err(()),
         }
     }

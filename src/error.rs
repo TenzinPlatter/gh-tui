@@ -3,7 +3,7 @@ use ratatui::{
     buffer::Buffer,
     layout::{HorizontalAlignment, Rect},
     style::Style,
-    widgets::{Block, BorderType, Paragraph, Widget, WidgetRef, Wrap},
+    widgets::{Block, BorderType, Padding, Paragraph, Widget, WidgetRef, Wrap},
 };
 use unicode_ellipsis::truncate_str;
 
@@ -25,11 +25,11 @@ impl ErrorInfo {
         let text_len = u16::max(self.short.len() as u16, self.long.len() as u16);
 
         // +2 for border chars, +2 for padding
-        u16::min(text_len, ERROR_NOTIFICATION_WINDOW_MAX_WIDTH)
+        u16::min(text_len + 4, ERROR_NOTIFICATION_WINDOW_MAX_WIDTH)
     }
 
     pub fn get_required_height(&self, available_width: u16) -> u16 {
-        let inner_width = available_width.saturating_sub(2) as usize;
+        let inner_width = available_width.saturating_sub(4) as usize; // -2 borders, -2 padding
         if inner_width == 0 {
             return ERROR_NOTIFICATION_MAX_HEIGHT;
         }
@@ -61,10 +61,11 @@ impl WidgetRef for ErrorInfo {
     #[doc = " Draws the current state of the widget in the given buffer. That is the only method required"]
     #[doc = " to implement a custom widget."]
     fn render_ref(&self, area: Rect, buf: &mut Buffer) {
-        let title_width = (ERROR_NOTIFICATION_WINDOW_MAX_WIDTH as usize) - 2;
+        let title_width = (ERROR_NOTIFICATION_WINDOW_MAX_WIDTH as usize) - 4; // -2 corners, -2 padding
         let truncated_title = truncate_str(&self.short, title_width);
+        let padded_title = format!(" {} ", truncated_title);
         dbg_file!("{}", truncated_title);
-        let inner_width = area.width.saturating_sub(2) as usize;
+        let inner_width = area.width.saturating_sub(4) as usize; // -2 borders, -2 padding
         let display_text = truncate_to_lines(
             &self.long,
             inner_width,
@@ -72,10 +73,11 @@ impl WidgetRef for ErrorInfo {
         );
 
         let block = Block::bordered()
-            .title_top(truncated_title)
+            .title_top(padded_title)
             .title_alignment(HorizontalAlignment::Center)
             .border_style(Style::default().red())
-            .border_type(BorderType::Rounded);
+            .border_type(BorderType::Rounded)
+            .padding(Padding::horizontal(1));
 
         Paragraph::new(display_text)
             .wrap(Wrap { trim: true })

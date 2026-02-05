@@ -1,7 +1,7 @@
 use anyhow::Context;
-use slugify::slugify;
 use ratatui::{style::Style, text::Line, widgets::ListItem};
 use serde::{Deserialize, Serialize};
+use slugify::slugify;
 use uuid::Uuid;
 
 use crate::{
@@ -57,6 +57,24 @@ impl ApiClient {
         };
 
         Ok(stories)
+    }
+
+    pub async fn update_story_description(
+        &self,
+        story: &Story,
+        new_description: String,
+    ) -> anyhow::Result<()> {
+        let body = serde_json::json!({
+            "description": new_description,
+        });
+
+        let response = self
+            .put_with_body(&format!("stories/{}", story.id), &body)
+            .await?;
+
+        // ignore the returned Story, we don't need and no need to parse the body of the response
+        response.error_for_status()?;
+        Ok(())
     }
 }
 

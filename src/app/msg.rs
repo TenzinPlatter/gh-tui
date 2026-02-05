@@ -29,4 +29,5 @@ pub enum StoryListMsg {
     OpenNote,
     SelectStory,
     TmuxEnter,
+    EditStoryContents,
 }
