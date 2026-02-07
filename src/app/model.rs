@@ -58,6 +58,7 @@ pub struct DataState {
     pub stories: Vec<Story>,
     pub epics: Vec<Epic>,
     pub current_iteration: Option<Iteration>,
+    pub active_story: Option<Story>,
 }
 
 pub struct UiState {
@@ -68,34 +69,18 @@ pub struct UiState {
 }
 
 impl UiState {
-    pub fn new(active_story: Option<Story>) -> UiState {
+    pub fn new() -> UiState {
         Self {
             active_view: ViewType::default(),
             action_menu: ActionMenuState::default(),
             errors: vec![ErrorInfo::new("hi there", "hello!")],
-            story_list: StoryListState {
-                selected_index: Some(0),
-                expanded_items: HashSet::default(),
-                active_story,
-            },
+            story_list: StoryListState::default(),
         }
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct StoryListState {
     pub selected_index: Option<usize>,
     pub expanded_items: HashSet<usize>,
-    // TODO: reference
-    pub active_story: Option<Story>,
-}
-
-impl Default for StoryListState {
-    fn default() -> Self {
-        Self {
-            selected_index: Some(0),
-            expanded_items: HashSet::default(),
-            active_story: None,
-        }
-    }
 }

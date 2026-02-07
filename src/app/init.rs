@@ -41,8 +41,9 @@ impl App {
                 stories: cache.iteration_stories.clone().unwrap_or_default(),
                 epics: vec![],
                 current_iteration: cache.current_iteration.clone(),
+                active_story: cache.active_story.clone(),
             },
-            ui: UiState::new(cache.active_story.clone()),
+            ui: UiState::new(),
             config: config.clone(),
             cache,
         };
@@ -124,8 +125,9 @@ impl App {
                 stories: stories.clone(),
                 epics: vec![],
                 current_iteration: Some(iteration.clone()),
+                active_story: None,
             },
-            ui: UiState::new(None),
+            ui: UiState::new(),
             config: config.clone(),
             cache,
         };

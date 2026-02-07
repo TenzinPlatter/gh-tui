@@ -15,14 +15,21 @@ use super::story_row::StoryRow;
 pub struct StoryListView<'a> {
     stories: &'a [Story],
     state: &'a StoryListState,
+    active_story: Option<&'a Story>,
     is_focused: bool,
 }
 
 impl<'a> StoryListView<'a> {
-    pub fn new(stories: &'a [Story], state: &'a StoryListState, is_focused: bool) -> Self {
+    pub fn new(
+        stories: &'a [Story],
+        state: &'a StoryListState,
+        active_story: Option<&'a Story>,
+        is_focused: bool,
+    ) -> Self {
         Self {
             stories,
             state,
+            active_story,
             is_focused,
         }
     }
@@ -42,7 +49,7 @@ impl<'a> WidgetRef for StoryListView<'a> {
             .enumerate()
             .map(|(idx, story)| {
                 let is_expanded = self.state.expanded_items.contains(&idx);
-                let is_active = match &self.state.active_story {
+                let is_active = match self.active_story {
                     Some(active_story) => active_story.id == story.id,
                     None => false,
                 };

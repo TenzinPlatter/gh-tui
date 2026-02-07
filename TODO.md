@@ -7,7 +7,7 @@
 - [ ] add worktree integration
 - [ ] Refactor msgs/cmds to not take entire Story/Iteration objects, just what is needed to avoid cloning everything
 - [ ] Refactor StoryListState to use SelectedItem trait
-- [ ] Move active_story out of story list state into data state
+- [x] Move active_story out of story list state into data state
 - [ ] Move action menu to use custom list
 - add shortcut integration:
   - [ ] Edit ticket description

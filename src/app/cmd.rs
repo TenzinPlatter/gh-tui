@@ -101,14 +101,14 @@ pub async fn execute(
         }
 
         Cmd::SelectStory(story) => {
-            if let Some(active_story) = &model.ui.story_list.active_story
+            if let Some(active_story) = &model.data.active_story
                 && let Some(story) = &story
                 && active_story.id == story.id
             {
                 model.cache.active_story = None;
-                model.ui.story_list.active_story = None;
+                model.data.active_story = None;
             } else {
-                model.ui.story_list.active_story = story.clone();
+                model.data.active_story = story.clone();
                 model.cache.active_story = story;
             }
 
