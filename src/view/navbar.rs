@@ -6,20 +6,38 @@ use ratatui::{
     widgets::{Block, Paragraph, Widget, WidgetRef},
 };
 
-use crate::app::model::ViewType;
+use crate::app::model::{LoadingState, ViewType};
+
+const SPINNER_CHARS: &[char] = &['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
 
 pub struct NavBar {
     active_view: ViewType,
+    loading: LoadingState,
+    has_stories: bool,
+    tick: usize,
 }
 
 impl NavBar {
-    pub fn new(active_view: ViewType) -> Self {
-        Self { active_view }
+    pub fn new(active_view: ViewType, loading: LoadingState, has_stories: bool, tick: usize) -> Self {
+        Self {
+            active_view,
+            loading,
+            has_stories,
+            tick,
+        }
+    }
+
+    fn spinner_char(&self) -> char {
+        SPINNER_CHARS[self.tick % SPINNER_CHARS.len()]
     }
 }
 
 impl WidgetRef for NavBar {
     fn render_ref(&self, area: Rect, buf: &mut Buffer) {
+        let block = Block::bordered();
+        let inner = block.inner(area);
+        block.render(area, buf);
+
         let all_views = [
             ViewType::Iteration,
             ViewType::Epics,
@@ -51,8 +69,25 @@ impl WidgetRef for NavBar {
         }
 
         let line = Line::from(spans);
-        let paragraph = Paragraph::new(line).block(Block::bordered());
+        let paragraph = Paragraph::new(line);
+        paragraph.render(inner, buf);
 
-        Widget::render(paragraph, area, buf);
+        // Show spinner on right when loading AND we have cached stories displayed
+        if self.loading.is_loading() && self.has_stories {
+            let loading_text = format!("{} {}", self.spinner_char(), self.loading.label());
+            let loading_span = Span::styled(loading_text.clone(), Style::default().gray());
+            let loading_width = loading_text.len() as u16;
+
+            if inner.width > loading_width {
+                let loading_area = Rect::new(
+                    inner.x + inner.width - loading_width,
+                    inner.y,
+                    loading_width,
+                    1,
+                );
+                let loading_paragraph = Paragraph::new(Line::from(loading_span));
+                loading_paragraph.render(loading_area, buf);
+            }
+        }
     }
 }

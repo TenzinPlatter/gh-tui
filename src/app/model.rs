@@ -9,6 +9,28 @@ use crate::{
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum LoadingState {
+    #[default]
+    FetchingIteration,
+    FetchingStories,
+    Loaded,
+}
+
+impl LoadingState {
+    pub fn label(&self) -> &'static str {
+        match self {
+            LoadingState::FetchingIteration => "Fetching iteration...",
+            LoadingState::FetchingStories => "Loading stories...",
+            LoadingState::Loaded => "",
+        }
+    }
+
+    pub fn is_loading(&self) -> bool {
+        !matches!(self, LoadingState::Loaded)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ViewType {
     #[default]
     Iteration, // Current default: story list
@@ -61,12 +83,26 @@ pub struct DataState {
     pub active_story: Option<Story>,
 }
 
-#[derive(Default)]
 pub struct UiState {
     pub active_view: ViewType,
     pub story_list: StoryListState,
     pub action_menu: ActionMenuState,
     pub errors: Vec<ErrorInfo>,
+    pub loading: LoadingState,
+    pub throbber_state: throbber_widgets_tui::ThrobberState,
+}
+
+impl Default for UiState {
+    fn default() -> Self {
+        Self {
+            active_view: ViewType::default(),
+            story_list: StoryListState::default(),
+            action_menu: ActionMenuState::default(),
+            errors: Vec::new(),
+            loading: LoadingState::default(),
+            throbber_state: throbber_widgets_tui::ThrobberState::default(),
+        }
+    }
 }
 
 #[derive(Clone, Default)]

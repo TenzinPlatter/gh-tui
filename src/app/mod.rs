@@ -76,6 +76,10 @@ impl App {
     }
 
     fn draw(&mut self, frame: &mut Frame) {
+        // Advance spinner animation
+        self.model.ui.throbber_state.calc_next();
+        let tick = self.model.ui.throbber_state.index().unsigned_abs() as usize;
+
         // Split screen: navbar at top, main view below
         let chunks = Layout::default()
             .direction(Direction::Vertical)
@@ -86,7 +90,13 @@ impl App {
             .split(frame.area());
 
         // Render navbar
-        let navbar = NavBar::new(self.model.ui.active_view);
+        let has_stories = !self.model.data.stories.is_empty();
+        let navbar = NavBar::new(
+            self.model.ui.active_view,
+            self.model.ui.loading,
+            has_stories,
+            tick,
+        );
         frame.render_widget_ref(navbar, chunks[0]);
 
         // Render main view based on active_view
@@ -97,6 +107,8 @@ impl App {
                     &self.model.ui.story_list,
                     self.model.data.active_story.as_ref(),
                     true, // Always focused (single view)
+                    self.model.ui.loading,
+                    tick,
                 );
 
                 frame.render_widget_ref(story_list_view, chunks[1]);

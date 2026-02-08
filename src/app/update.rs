@@ -4,6 +4,7 @@ use crate::{
     app::{
         App,
         cmd::Cmd,
+        model::LoadingState,
         msg::Msg,
         pane::{action_menu, story_list},
     },
@@ -33,6 +34,12 @@ impl App {
                 stories,
                 from_cache,
             } => {
+                // Only transition to Loaded on fresh API data, not cached
+                // This keeps spinner showing during background refresh
+                if !from_cache {
+                    self.model.ui.loading = LoadingState::Loaded;
+                }
+
                 if !from_cache
                     && self.model.data.stories.len() == stories.len()
                     && self
@@ -60,6 +67,7 @@ impl App {
             Msg::IterationLoaded(iteration) => {
                 self.model.data.current_iteration = Some(iteration.clone());
                 self.model.cache.current_iteration = Some(iteration.clone());
+                self.model.ui.loading = LoadingState::FetchingStories;
 
                 vec![Cmd::WriteCache, Cmd::FetchStories { iteration }]
             }
@@ -77,6 +85,8 @@ impl App {
 
             Msg::Error(e) => {
                 self.model.ui.errors.push(e);
+                // Stop loading spinner on error
+                self.model.ui.loading = LoadingState::Loaded;
                 vec![Cmd::None]
             }
 
