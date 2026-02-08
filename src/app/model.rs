@@ -1,5 +1,7 @@
 use std::collections::HashSet;
 
+use throbber_widgets_tui::ThrobberState;
+
 use crate::{
     api::{epic::Epic, iteration::Iteration, story::Story},
     app::pane::action_menu::ActionMenuState,
@@ -90,7 +92,7 @@ pub struct UiState {
     pub action_menu: ActionMenuState,
     pub errors: Vec<ErrorInfo>,
     pub loading: LoadingState,
-    pub throbber_state: throbber_widgets_tui::ThrobberState,
+    pub throbber_state: ThrobberState,
 }
 
 

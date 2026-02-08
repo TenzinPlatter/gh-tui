@@ -40,6 +40,11 @@ impl App {
                     self.model.ui.loading = LoadingState::Loaded;
                 }
 
+                // Select first story if none selected and list is non-empty
+                if self.model.ui.story_list.selected_index.is_none() && !stories.is_empty() {
+                    self.model.ui.story_list.selected_index = Some(0);
+                }
+
                 if !from_cache
                     && self.model.data.stories.len() == stories.len()
                     && self
