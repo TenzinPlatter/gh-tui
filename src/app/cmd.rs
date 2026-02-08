@@ -157,6 +157,10 @@ pub async fn execute(
 
         Cmd::ActionMenuVisibility(enabled) => {
             model.ui.action_menu.is_showing = enabled;
+            if !enabled {
+                model.ui.action_menu.list_state.select(Some(0));
+            }
+
             Ok(())
         }
 
