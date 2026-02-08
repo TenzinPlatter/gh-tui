@@ -1,5 +1,4 @@
 //! Dummy data for development/testing. Enable with DUMMY_DATA=1 env var.
-//! TODO: Remove this module when real API integration is complete.
 
 use chrono::Utc;
 

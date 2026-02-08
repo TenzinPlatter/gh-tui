@@ -1,4 +1,5 @@
 use std::io::{Stdout, Write};
+use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use crossterm::ExecutableCommand;
@@ -8,7 +9,7 @@ use crossterm::terminal::{
 use ratatui::{Terminal, prelude::CrosstermBackend};
 use std::{
     fs::{OpenOptions, create_dir_all, read_to_string},
-    process::Command as ProcessCommand,
+    process::Command,
 };
 use tempfile::NamedTempFile;
 use tokio::sync::mpsc::UnboundedSender;
@@ -16,6 +17,7 @@ use tokio::sync::mpsc::UnboundedSender;
 use crate::app::model::Model;
 use crate::error::ErrorInfo;
 use crate::tmux::{session_attach, session_create};
+use crate::worktree::{create_worktree, get_repo_list, select_repo_with_fzf};
 use crate::{
     api::{ApiClient, iteration::Iteration, story::Story},
     app::msg::Msg,
@@ -39,6 +41,9 @@ pub enum Cmd {
     FetchEpics,
     SelectStory(Option<Story>),
     ActionMenuVisibility(bool),
+    CreateGitWorktree {
+        branch_name: String,
+    },
     OpenTmuxSession {
         story_name: String,
     },
@@ -140,9 +145,7 @@ pub async fn execute(
             std::io::stdout().execute(LeaveAlternateScreen)?;
             disable_raw_mode()?;
 
-            ProcessCommand::new(model.config.editor())
-                .arg(tmp_path)
-                .status()?;
+            Command::new(&model.config.editor).arg(tmp_path).status()?;
 
             std::io::stdout().execute(EnterAlternateScreen)?;
             enable_raw_mode()?;
@@ -152,9 +155,18 @@ pub async fn execute(
 
             Ok(())
         }
-        
+
         Cmd::ActionMenuVisibility(enabled) => {
             model.ui.action_menu.is_showing = enabled;
+            Ok(())
+        }
+
+        Cmd::CreateGitWorktree { branch_name } => {
+            let repos = get_repo_list(&model.config).await?;
+            let chosen = select_repo_with_fzf(&repos, terminal)?;
+            let path = model.config.repositories_directory.join(chosen);
+            create_worktree(&path, &branch_name).await?;
+
             Ok(())
         }
     }
@@ -165,7 +177,7 @@ pub fn open_note_in_editor(
     iteration: Option<Iteration>,
     config: &Config,
 ) -> anyhow::Result<()> {
-    let note = Note::new(config.notes_dir(), &story, iteration.as_ref());
+    let note = Note::new(&config.notes_dir, &story, iteration.as_ref());
 
     if note.path.is_dir() {
         anyhow::bail!("Note path: {} is not a file", note.path.display());
@@ -189,9 +201,7 @@ pub fn open_note_in_editor(
         note.write_frontmatter(&mut f)?;
     }
 
-    ProcessCommand::new(config.editor())
-        .arg(note.path)
-        .status()?;
+    Command::new(&config.editor).arg(note.path).status()?;
 
     Ok(())
 }

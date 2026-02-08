@@ -61,22 +61,12 @@ pub struct DataState {
     pub active_story: Option<Story>,
 }
 
+#[derive(Default)]
 pub struct UiState {
     pub active_view: ViewType,
     pub story_list: StoryListState,
     pub action_menu: ActionMenuState,
     pub errors: Vec<ErrorInfo>,
-}
-
-impl UiState {
-    pub fn new() -> UiState {
-        Self {
-            active_view: ViewType::default(),
-            action_menu: ActionMenuState::default(),
-            errors: vec![ErrorInfo::new("hi there", "hello!")],
-            story_list: StoryListState::default(),
-        }
-    }
 }
 
 #[derive(Clone, Default)]

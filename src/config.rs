@@ -8,63 +8,83 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone)]
 pub struct Config {
-    notes_dir: PathBuf,
-    cache_dir: Option<PathBuf>,
-    api_token: String,
-    editor: String,
+    pub notes_dir: PathBuf,
+    pub cache_dir: PathBuf,
+    pub api_token: String,
+    pub editor: String,
+    pub repositories_directory: PathBuf,
 }
 
-#[derive(Deserialize, Serialize, Default, Clone)]
+#[derive(Deserialize, Serialize, Clone)]
 struct ConfigFile {
     notes_dir: String,
-    cache_dir: Option<String>,
+    #[serde(default = "default_cache_dir_string")]
+    cache_dir: String,
     api_token: String,
-    editor: Option<String>,
+    #[serde(default = "default_editor")]
+    editor: String,
+    #[serde(default = "default_repositories_directory")]
+    repositories_directory: String,
+}
+
+impl Default for ConfigFile {
+    fn default() -> Self {
+        Self {
+            notes_dir: String::new(),
+            cache_dir: default_cache_dir_string(),
+            api_token: String::new(),
+            editor: default_editor(),
+            repositories_directory: default_repositories_directory(),
+        }
+    }
+}
+
+fn default_cache_dir_string() -> String {
+    default_cache_dir().to_str().unwrap().to_string()
+}
+
+fn default_editor() -> String {
+    env::var("EDITOR").unwrap_or_default()
+}
+
+fn default_repositories_directory() -> String {
+    "~/Repositories".to_string()
 }
 
 impl Config {
     pub fn read() -> anyhow::Result<Config> {
         let config: ConfigFile = confy::load("shortcut-notes", Some("config"))?;
 
+        if config.notes_dir.is_empty() {
+            anyhow::bail!("notes_dir is required in config");
+        }
+        if config.api_token.is_empty() {
+            anyhow::bail!("api_token is required in config");
+        }
+        if config.editor.is_empty() {
+            anyhow::bail!("editor not set in config and $EDITOR is not set");
+        }
+
         let notes_dir = expand_tilde(&PathBuf::from(&config.notes_dir));
-        let cache_dir = config.cache_dir.map(|s| expand_tilde(&PathBuf::from(s)));
-        let editor = config
-            .editor
-            .or_else(|| env::var("EDITOR").ok())
-            .context("editor not set in config and $EDITOR is not set")?;
+        let cache_dir = expand_tilde(&PathBuf::from(&config.cache_dir));
+        let repositories_directory = expand_tilde(Path::new(&config.repositories_directory));
 
         Ok(Config {
             notes_dir,
             cache_dir,
             api_token: config.api_token,
-            editor,
+            editor: config.editor,
+            repositories_directory,
         })
-    }
-
-    pub fn notes_dir(&self) -> &PathBuf {
-        &self.notes_dir
-    }
-
-    pub fn cache_dir(&self) -> PathBuf {
-        self.cache_dir
-            .clone()
-            .unwrap_or_else(default_cache_dir)
-    }
-
-    pub fn api_token(&self) -> &str {
-        &self.api_token
-    }
-
-    pub fn editor(&self) -> &str {
-        &self.editor
     }
 
     pub fn write(&self) -> anyhow::Result<()> {
         let config = ConfigFile {
             notes_dir: self.notes_dir.to_str().unwrap().to_string(),
-            cache_dir: self.cache_dir.as_ref().map(|p| p.to_str().unwrap().to_string()),
+            cache_dir: self.cache_dir.to_str().unwrap().to_string(),
             api_token: self.api_token.clone(),
-            editor: Some(self.editor.clone()),
+            editor: self.editor.clone(),
+            repositories_directory: self.repositories_directory.to_str().unwrap().to_string(),
         };
 
         confy::store("shortcut-notes", Some("config"), config).context("Failed to write config")

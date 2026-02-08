@@ -1,6 +1,6 @@
 use clap::Parser;
 use shortcut_notes::{
-    cache::Cache, cli::Cli, config::Config, worktree::check_worktree_dependencies,
+    cache::Cache, cli::Cli, config::Config, worktree::{check_worktree_dependencies, get_repo_list},
 };
 
 #[tokio::main]
@@ -10,8 +10,9 @@ async fn main() -> anyhow::Result<()> {
     let args = Cli::parse();
     if let Some(cmd) = args.command {
         let config = Config::read()?;
-        let cache = Cache::read(config.cache_dir());
-        shortcut_notes::handle_command(cmd, cache, config).await?;
+        let cache = Cache::read(config.cache_dir.clone());
+        shortcut_notes::handle_command(cmd, cache, &config).await?;
+        config.write()?;
         return Ok(());
     }
 

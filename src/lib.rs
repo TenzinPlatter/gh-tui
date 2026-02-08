@@ -1,3 +1,9 @@
+use std::process::{Command, ExitStatus, Output};
+
+use crossterm::{
+    ExecutableCommand,
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
+};
 use ratatui::DefaultTerminal;
 use uuid::Uuid;
 
@@ -24,6 +30,7 @@ pub mod note;
 pub mod text_utils;
 pub mod tmux;
 pub mod view;
+pub mod worktree;
 #[macro_use]
 pub mod keys;
 
@@ -40,15 +47,16 @@ pub async fn get_user_id(saved_user_id: Option<Uuid>, api_token: &str) -> anyhow
 pub async fn run(terminal: &mut DefaultTerminal) -> anyhow::Result<()> {
     let mut app = App::init().await?;
     app.main_loop(terminal).await?;
+    app.config.write()?;
 
     Ok(())
 }
 
-pub async fn handle_command(command: Commands, cache: Cache, config: Config) -> anyhow::Result<()> {
+pub async fn handle_command(command: Commands, cache: Cache, config: &Config) -> anyhow::Result<()> {
     match command {
         Commands::Open => {
             if let Some(story) = cache.active_story {
-                open_note_in_editor(story, cache.current_iteration, &config)?;
+                open_note_in_editor(story, cache.current_iteration, config)?;
             } else {
                 anyhow::bail!("You do not have a currently active story");
             }
@@ -63,4 +71,20 @@ pub async fn handle_command(command: Commands, cache: Cache, config: Config) -> 
     }
 
     Ok(())
+}
+
+pub fn execute_for_output(
+    mut command: Command,
+    terminal: &mut DefaultTerminal,
+) -> anyhow::Result<Output> {
+    std::io::stdout().execute(LeaveAlternateScreen)?;
+    disable_raw_mode()?;
+
+    let result = command.output();
+
+    std::io::stdout().execute(EnterAlternateScreen)?;
+    enable_raw_mode()?;
+    terminal.clear()?;
+
+    Ok(result?)
 }

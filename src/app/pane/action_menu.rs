@@ -1,7 +1,7 @@
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     buffer::Buffer,
-    layout::{Margin, Rect},
+    layout::Rect,
     style::Style,
     text::Line,
     widgets::{
@@ -91,16 +91,18 @@ impl StatefulWidget for ActionMenu {
 #[derive(Clone, Copy)]
 pub enum ActionMenuItem {
     OpenNote,
-    EditContents,
+    EditDescription,
     OpenTmux,
     SetActive,
+    CreateGitWorktree,
 }
 
 impl ActionMenuItem {
     pub const ALL: &[Self] = &[
         Self::OpenNote,
-        Self::EditContents,
+        Self::CreateGitWorktree,
         Self::OpenTmux,
+        Self::EditDescription,
         Self::SetActive,
     ];
 
@@ -111,9 +113,10 @@ impl ActionMenuItem {
     pub fn label(self) -> &'static str {
         match self {
             Self::OpenNote => "Open Note",
-            Self::EditContents => "Edit Description",
+            Self::EditDescription => "Edit Description",
             Self::OpenTmux => "Open Tmux Session",
             Self::SetActive => "Set as Active Story",
+            Self::CreateGitWorktree => "Create git worktree",
         }
     }
 }
@@ -165,7 +168,7 @@ pub fn update(
                     }]
                 }
 
-                ActionMenuItem::EditContents => {
+                ActionMenuItem::EditDescription => {
                     vec![Cmd::EditStoryContent(story.clone())]
                 }
 
@@ -177,6 +180,13 @@ pub fn update(
 
                 ActionMenuItem::SetActive => {
                     vec![Cmd::SelectStory(Some(story.clone()))]
+                }
+
+                ActionMenuItem::CreateGitWorktree => {
+                    // TODO: figure out how to get actual branch name
+                    vec![Cmd::CreateGitWorktree {
+                        branch_name: "feat/branchname".to_string(),
+                    }]
                 }
             };
 
