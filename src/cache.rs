@@ -47,9 +47,7 @@ impl Cache {
         cache_dir
     }
 
-    pub fn read(cache_dir: Option<PathBuf>) -> Self {
-        let cache_dir = cache_dir.unwrap_or_else(Self::default_cache_dir);
-
+    pub fn read(cache_dir: PathBuf) -> Self {
         dbg_file!("Using {} as cache_dir", cache_dir.display());
 
         let cache_file = Self::get_cache_file(cache_dir);

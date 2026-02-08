@@ -140,7 +140,7 @@ pub async fn execute(
             std::io::stdout().execute(LeaveAlternateScreen)?;
             disable_raw_mode()?;
 
-            ProcessCommand::new(&model.config.editor)
+            ProcessCommand::new(model.config.editor())
                 .arg(tmp_path)
                 .status()?;
 
@@ -165,7 +165,7 @@ pub fn open_note_in_editor(
     iteration: Option<Iteration>,
     config: &Config,
 ) -> anyhow::Result<()> {
-    let note = Note::new(&config.notes_dir, &story, iteration.as_ref());
+    let note = Note::new(config.notes_dir(), &story, iteration.as_ref());
 
     if note.path.is_dir() {
         anyhow::bail!("Note path: {} is not a file", note.path.display());
@@ -189,7 +189,7 @@ pub fn open_note_in_editor(
         note.write_frontmatter(&mut f)?;
     }
 
-    ProcessCommand::new(&config.editor)
+    ProcessCommand::new(config.editor())
         .arg(note.path)
         .status()?;
 

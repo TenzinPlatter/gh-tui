@@ -19,15 +19,15 @@ use crate::{
 impl App {
     pub async fn init() -> Result<Self> {
         let config = Config::read()?;
-        let mut cache = Cache::read(config.cache_dir.clone());
+        let mut cache = Cache::read(config.cache_dir());
 
         if dummy::is_enabled() {
             return Self::init_with_dummy_data(config, cache).await;
         }
 
         let api_client = {
-            let user_id = get_user_id(cache.user_id, &config.api_token).await?;
-            ApiClient::new(config.api_token.clone(), user_id)
+            let user_id = get_user_id(cache.user_id, config.api_token()).await?;
+            ApiClient::new(config.api_token().to_owned(), user_id)
         };
 
         cache.user_id = Some(api_client.user_id);
@@ -110,7 +110,7 @@ impl App {
         use uuid::Uuid;
 
         let dummy_user_id = Uuid::nil();
-        let api_client = ApiClient::new(config.api_token.clone(), dummy_user_id);
+        let api_client = ApiClient::new(config.api_token().to_owned(), dummy_user_id);
 
         cache.user_id = Some(dummy_user_id);
 
