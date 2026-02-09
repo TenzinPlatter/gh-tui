@@ -15,4 +15,4 @@
   - [ ] Edit ticket comments
   - [ ] Change ticket state
   - [ ] Update days taken (do automatically when putting ticket to finished?)
-  - [ ] TODO: add points for epic/iteration integration
+  - [ ] TODO: add todo points for epic/iteration integration

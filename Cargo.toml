@@ -6,7 +6,7 @@ description = "A TUI to manage notes with Shorcut project management integration
 license = "MIT"
 
 [[bin]]
-name = "note"
+name = "sc"
 path = "src/main.rs"
 
 [dependencies]
