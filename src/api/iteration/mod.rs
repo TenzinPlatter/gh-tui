@@ -1,11 +1,14 @@
 use anyhow::Context;
 use chrono::{NaiveDate, Utc};
-use futures::future::try_join_all;
+use futures::future::{join_all, try_join_all};
 use serde::{Deserialize, Serialize};
 
-use crate::api::{
-    ApiClient,
-    story::{Story, StorySlim},
+use crate::{
+    api::{
+        ApiClient,
+        story::{Story, StorySlim},
+    },
+    dbg_file,
 };
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
@@ -26,26 +29,55 @@ pub struct IterationSlim {
 }
 
 impl ApiClient {
-    pub async fn get_current_iteration(&self) -> anyhow::Result<Iteration> {
+    pub async fn get_current_iterations(&self) -> anyhow::Result<Vec<Iteration>> {
         let response = self.get("iterations").await?;
         let iterations_slim = response.json::<Vec<IterationSlim>>().await?;
         let today = Utc::now().date_naive();
-        let current_iteration_id = iterations_slim
+        let current_iteration_ids: Vec<_> = iterations_slim
             .iter()
-            // will return first that matches condition
-            .find(|it| it.start_date <= today && it.end_date >= today)
-            .map(|it| it.id);
+            .filter(|it| it.start_date <= today && it.end_date >= today)
+            .map(|it| it.id)
+            .collect();
 
-        if let Some(id) = current_iteration_id {
+        let iterations = join_all(current_iteration_ids.iter().map(|id| async move {
             let response = self.get(&format!("iterations/{id}")).await?;
-            Ok(response.json::<Iteration>().await?)
-        } else {
-            // TODO: handle this, return an option
-            anyhow::bail!("Couldn't find a current iteration");
-        }
+            // add the context to cast response to an anyhow error, but we will filter out errors
+            // so don't need a real message
+            response.json::<Iteration>().await.context("")
+        }))
+        .await
+        .into_iter()
+        .filter_map(|res| res.ok())
+        .collect();
+
+        Ok(iterations)
     }
 
     pub async fn get_owned_iteration_stories(
+        &self,
+        iteration_ids: Vec<i32>,
+    ) -> anyhow::Result<Vec<Story>> {
+        let iteration_stories = join_all(
+            iteration_ids
+                .iter()
+                .map(|id| async { self.get_owned_single_iteration_stories(*id).await }),
+        )
+        .await
+        .into_iter()
+        .filter_map(|res| match res {
+            Ok(stories) => Some(stories),
+            Err(e) => {
+                dbg_file!("Failed to fetch story with error: {}", e);
+                None
+            }
+        })
+        .flatten()
+        .collect();
+
+        Ok(iteration_stories)
+    }
+
+    async fn get_owned_single_iteration_stories(
         &self,
         iteration_id: i32,
     ) -> anyhow::Result<Vec<Story>> {

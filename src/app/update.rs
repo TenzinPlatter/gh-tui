@@ -26,7 +26,7 @@ impl App {
             Msg::StoryList(story_msg) => story_list::update(
                 &mut self.model.ui.story_list,
                 &self.model.data.stories,
-                self.model.data.current_iteration.as_ref(),
+                self.model.data.current_iterations_ref(),
                 story_msg,
             ),
 
@@ -69,17 +69,19 @@ impl App {
                 vec![Cmd::None]
             }
 
-            Msg::IterationLoaded(iteration) => {
-                self.model.data.current_iteration = Some(iteration.clone());
-                self.model.cache.current_iteration = Some(iteration.clone());
+            Msg::IterationsLoaded(iterations) => {
+                self.model.data.current_iterations = Some(iterations.clone());
+                self.model.cache.current_iterations = Some(iterations.clone());
                 self.model.ui.loading = LoadingState::FetchingStories;
 
-                vec![
-                    Cmd::WriteCache,
-                    Cmd::FetchStories {
+                let mut res = vec![Cmd::WriteCache];
+                for iteration in iterations.iter() {
+                    res.push(Cmd::FetchStories {
                         iteration_id: iteration.id,
-                    },
-                ]
+                    });
+                }
+
+                res
             }
 
             Msg::SwitchToView(view_type) => {
@@ -103,7 +105,12 @@ impl App {
             Msg::ActionMenu(menu_msg) => {
                 if let Some(idx) = self.model.ui.story_list.selected_index {
                     let hovered_story = &self.model.data.stories[idx];
-                    action_menu::update(&mut self.model.ui, &self.model.data, menu_msg, hovered_story)
+                    action_menu::update(
+                        &mut self.model.ui,
+                        &self.model.data,
+                        menu_msg,
+                        hovered_story,
+                    )
                 } else {
                     vec![Cmd::None]
                 }

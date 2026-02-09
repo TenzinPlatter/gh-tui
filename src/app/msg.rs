@@ -14,7 +14,7 @@ pub enum Msg {
         from_cache: bool,
     },
     EpicsLoaded(Vec<Epic>),
-    IterationLoaded(Iteration),
+    IterationsLoaded(Vec<Iteration>),
     SwitchToView(ViewType),
     NoteOpened,
     ToggleActionMenu,

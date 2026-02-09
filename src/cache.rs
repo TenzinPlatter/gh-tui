@@ -15,7 +15,7 @@ use crate::{
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct Cache {
-    pub current_iteration: Option<Iteration>,
+    pub current_iterations: Option<Vec<Iteration>>,
     pub iteration_stories: Option<Vec<Story>>,
     pub active_story: Option<Story>,
     pub user_id: Option<Uuid>,
@@ -25,7 +25,7 @@ pub struct Cache {
 impl Default for Cache {
     fn default() -> Self {
         Self {
-            current_iteration: Default::default(),
+            current_iterations: Default::default(),
             iteration_stories: Default::default(),
             user_id: Default::default(),
             active_story: Default::default(),
@@ -35,6 +35,10 @@ impl Default for Cache {
 }
 
 impl Cache {
+    pub fn current_iterations_ref(&self) -> Option<Vec<&Iteration>> {
+        self.current_iterations.as_ref().map(|v| v.iter().collect())
+    }
+
     fn default_cache_dir() -> PathBuf {
         let mut base = env::home_dir().expect("Couldn't find home dir");
         base.push(".cache");

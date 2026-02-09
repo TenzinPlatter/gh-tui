@@ -11,7 +11,7 @@ use ratatui::{
 };
 
 use crate::{
-    api::story::Story,
+    api::story::{Story, get_story_associated_iteration},
     app::{
         cmd::Cmd,
         model::{DataState, UiState},
@@ -162,14 +162,16 @@ pub fn update(
         ActionMenuMsg::Accept => {
             let mut actions = match ActionMenuItem::from_idx(state.selected().unwrap_or(0)) {
                 ActionMenuItem::OpenNote => {
+                    let iteration_app_url = data_state
+                        .current_iterations_ref()
+                        .and_then(|iterations| get_story_associated_iteration(story.iteration_id, iterations))
+                        .map(|it| it.app_url.clone());
+
                     vec![Cmd::OpenNote {
                         story_id: story.id,
                         story_name: story.name.clone(),
                         story_app_url: story.app_url.clone(),
-                        iteration_app_url: data_state
-                            .current_iteration
-                            .as_ref()
-                            .map(|it| it.app_url.clone()),
+                        iteration_app_url,
                     }]
                 }
 

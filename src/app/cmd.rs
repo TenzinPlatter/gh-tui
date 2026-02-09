@@ -94,7 +94,10 @@ pub async fn execute(
             let api_client = api_client.clone();
 
             tokio::spawn(async move {
-                match api_client.get_owned_iteration_stories(iteration_id).await {
+                match api_client
+                    .get_owned_iteration_stories(vec![iteration_id])
+                    .await
+                {
                     Ok(stories) => {
                         sender
                             .send(Msg::StoriesLoaded {
@@ -248,7 +251,13 @@ pub fn open_note_in_editor_tui(
     std::io::stdout().execute(LeaveAlternateScreen)?;
     disable_raw_mode()?;
 
-    let result = open_note_in_editor(story_id, story_name, story_app_url, iteration_app_url, config);
+    let result = open_note_in_editor(
+        story_id,
+        story_name,
+        story_app_url,
+        iteration_app_url,
+        config,
+    );
 
     std::io::stdout().execute(EnterAlternateScreen)?;
     enable_raw_mode()?;

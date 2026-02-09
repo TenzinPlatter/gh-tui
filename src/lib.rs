@@ -8,7 +8,10 @@ use ratatui::DefaultTerminal;
 use uuid::Uuid;
 
 use crate::{
-    api::{story::Story, user::get_user_id_from_api},
+    api::{
+        story::{Story, get_story_associated_iteration},
+        user::get_user_id_from_api,
+    },
     app::{
         App,
         cmd::{open_note_in_editor, open_tmux_session},
@@ -52,15 +55,24 @@ pub async fn run(terminal: &mut DefaultTerminal) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub async fn handle_command(command: Commands, cache: Cache, config: &Config) -> anyhow::Result<()> {
+pub async fn handle_command(
+    command: Commands,
+    cache: Cache,
+    config: &Config,
+) -> anyhow::Result<()> {
     match command {
         Commands::Open => {
-            if let Some(story) = cache.active_story {
+            if let Some(story) = &cache.active_story {
+                let iteration_app_url = cache
+                    .current_iterations_ref()
+                    .and_then(|iterations| get_story_associated_iteration(story.iteration_id, iterations))
+                    .map(|it| it.app_url.clone());
+
                 open_note_in_editor(
                     story.id,
-                    story.name,
-                    story.app_url,
-                    cache.current_iteration.map(|it| it.app_url),
+                    story.name.clone(),
+                    story.app_url.clone(),
+                    iteration_app_url,
                     config,
                 )?;
             } else {

@@ -3,7 +3,10 @@ use chrono::Utc;
 use tokio::sync::mpsc;
 
 use crate::{
-    api::{ApiClient, iteration::Iteration},
+    api::{
+        ApiClient,
+        iteration::{self, Iteration},
+    },
     app::{
         App,
         model::{DataState, Model, UiState},
@@ -40,7 +43,7 @@ impl App {
             data: DataState {
                 stories: cache.iteration_stories.clone().unwrap_or_default(),
                 epics: vec![],
-                current_iteration: cache.current_iteration.clone(),
+                current_iterations: cache.current_iterations.clone(),
                 active_story: cache.active_story.clone(),
             },
             ui: UiState::default(),
@@ -48,14 +51,13 @@ impl App {
             cache,
         };
 
-        let api_client_clone = api_client.clone();
-        let saved_iteration = model.cache.current_iteration.clone();
         let saved_stories = model.cache.iteration_stories.clone();
+        let api_client_clone = api_client.clone();
         tokio::spawn(async move {
-            let iteration = match get_current_iteration(saved_iteration, &api_client_clone).await {
-                Ok(it) => {
-                    let _ = sender.send(Msg::IterationLoaded(it.clone()));
-                    it
+            let iterations = match api_client_clone.get_current_iterations().await {
+                Ok(iterations) => {
+                    let _ = sender.send(Msg::IterationsLoaded(iterations.clone()));
+                    iterations
                 }
                 Err(e) => {
                     let info = ErrorInfo::new(
@@ -75,10 +77,8 @@ impl App {
                 });
             }
 
-            match api_client_clone
-                .get_owned_iteration_stories(iteration.id)
-                .await
-            {
+            let ids = iterations.iter().map(|it| it.id).collect();
+            match api_client_clone.get_owned_iteration_stories(ids).await {
                 Ok(stories) => {
                     let _ = sender.send(Msg::StoriesLoaded {
                         stories,
@@ -124,7 +124,7 @@ impl App {
             data: DataState {
                 stories: stories.clone(),
                 epics: vec![],
-                current_iteration: Some(iteration.clone()),
+                current_iterations: Some(vec![iteration.clone()]),
                 active_story: None,
             },
             ui: UiState::default(),
@@ -133,7 +133,7 @@ impl App {
         };
 
         // Send messages so UI updates as if data loaded normally
-        let _ = sender.send(Msg::IterationLoaded(iteration));
+        let _ = sender.send(Msg::IterationsLoaded(vec![iteration]));
         let _ = sender.send(Msg::StoriesLoaded {
             stories,
             from_cache: false,
@@ -147,24 +147,5 @@ impl App {
             api_client,
             config,
         })
-    }
-}
-
-async fn get_current_iteration(
-    saved_iteration: Option<Iteration>,
-    api_client: &ApiClient,
-) -> anyhow::Result<Iteration> {
-    // NOTE: using UTC here could cause timezone issues
-    let today = Utc::now().date_naive();
-    if let Some(iteration) = saved_iteration
-        && iteration.start_date <= today
-        && iteration.end_date >= today
-    {
-        Ok(iteration)
-    } else {
-        api_client
-            .get_current_iteration()
-            .await
-            .context("Failed to get the current iteration")
     }
 }

@@ -4,9 +4,7 @@ use serde::{Deserialize, Serialize};
 use slugify::slugify;
 use uuid::Uuid;
 
-use crate::{
-    api::{ApiClient, branch::Branch, story::comment::StoryComment},
-};
+use crate::api::{ApiClient, branch::Branch, iteration::Iteration, story::comment::StoryComment};
 
 pub mod comment;
 
@@ -30,7 +28,7 @@ pub struct StorySlim {
 }
 
 impl ApiClient {
-    pub async fn get_owned_stories(&self) -> anyhow::Result<Vec<Story>> {
+    pub async fn get_active_owned_stories(&self) -> anyhow::Result<Vec<Story>> {
         let body = serde_json::json!({
             "archived": false,
             "owner_ids": [self.user_id],
@@ -95,8 +93,7 @@ impl Story {
             }
         } else {
             text.push(
-                Line::from("  Press <Space> to view description")
-                .style(Style::default().italic()),
+                Line::from("  Press <Space> to view description").style(Style::default().italic()),
             )
         }
 
@@ -114,4 +111,12 @@ impl Story {
     pub fn get_file_name(&self) -> String {
         self.name.to_string()
     }
+}
+
+pub fn get_story_associated_iteration<'a>(
+    iteration_id: Option<i32>,
+    iterations: impl IntoIterator<Item = &'a Iteration>,
+) -> Option<&'a Iteration> {
+    let iteration_id = iteration_id?;
+    iterations.into_iter().find(|it| it.id == iteration_id)
 }

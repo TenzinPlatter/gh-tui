@@ -81,7 +81,7 @@ pub struct Model {
 pub struct DataState {
     pub stories: Vec<Story>,
     pub epics: Vec<Epic>,
-    pub current_iteration: Option<Iteration>,
+    pub current_iterations: Option<Vec<Iteration>>,
     pub active_story: Option<Story>,
 }
 
@@ -100,4 +100,10 @@ pub struct UiState {
 pub struct StoryListState {
     pub selected_index: Option<usize>,
     pub expanded_items: HashSet<usize>,
+}
+
+impl DataState {
+    pub fn current_iterations_ref(&self) -> Option<Vec<&Iteration>> {
+        self.current_iterations.as_ref().map(|v| v.iter().collect())
+    }
 }

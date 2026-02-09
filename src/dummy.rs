@@ -11,7 +11,7 @@ pub fn is_enabled() -> bool {
 pub fn iteration() -> Iteration {
     let today = Utc::now().date_naive();
     Iteration {
-        id: 1,
+        id: -1,
         name: "Sprint 42".to_string(),
         description: "The sprint where we answer everything".to_string(),
         start_date: today - chrono::Duration::days(7),

@@ -1,7 +1,10 @@
 use crossterm::event::{KeyCode, KeyEvent};
 
 use crate::{
-    api::{iteration::Iteration, story::Story},
+    api::{
+        iteration::Iteration,
+        story::{Story, get_story_associated_iteration},
+    },
     app::{cmd::Cmd, msg::StoryListMsg},
     dbg_file, navkey,
 };
@@ -11,7 +14,7 @@ pub use crate::app::model::StoryListState;
 pub fn update(
     state: &mut StoryListState,
     stories: &[Story],
-    current_iteration: Option<&Iteration>,
+    current_iterations: Option<Vec<&Iteration>>,
     msg: StoryListMsg,
 ) -> Vec<Cmd> {
     match msg {
@@ -56,11 +59,15 @@ pub fn update(
 
         StoryListMsg::OpenNote => {
             if let Some(story) = get_selected_story(state, stories) {
+                let iteration_app_url = current_iterations
+                    .and_then(|iterations| get_story_associated_iteration(story.iteration_id, iterations))
+                    .map(|it| it.app_url.clone());
+
                 return vec![Cmd::OpenNote {
                     story_id: story.id,
                     story_name: story.name.clone(),
                     story_app_url: story.app_url.clone(),
-                    iteration_app_url: current_iteration.map(|it| it.app_url.clone()),
+                    iteration_app_url,
                 }];
             }
             vec![Cmd::None]
