@@ -19,7 +19,7 @@ pub enum LoadingState {
 impl LoadingState {
     pub fn label(&self) -> &'static str {
         match self {
-            LoadingState::FetchingIteration => "Fetching iteration...",
+            LoadingState::FetchingIteration => "Fetching iterations...",
             LoadingState::FetchingStories => "Loading stories...",
             LoadingState::Loaded => "",
         }
