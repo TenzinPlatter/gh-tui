@@ -95,7 +95,7 @@ pub async fn execute(
             let sender = sender.clone();
             let api_client = api_client.clone();
 
-            tokio::spawn(async move {
+            let handle = tokio::spawn(async move {
                 match api_client.get_owned_iteration_stories(iteration_ids).await {
                     Ok(stories) => {
                         sender
@@ -115,6 +115,9 @@ pub async fn execute(
                     }
                 }
             });
+
+            model.data.async_handles.push(handle);
+
             Ok(())
         }
 

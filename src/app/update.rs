@@ -20,6 +20,11 @@ impl App {
         match msg {
             Msg::Quit => {
                 self.exit = true;
+                for handle in &self.model.data.async_handles {
+                    if !handle.is_finished() {
+                        handle.abort();
+                    }
+                }
                 vec![Cmd::None]
             }
 

@@ -1,4 +1,5 @@
 use throbber_widgets_tui::ThrobberState;
+use tokio::task::JoinHandle;
 
 use crate::{
     api::{epic::Epic, iteration::Iteration, story::Story},
@@ -82,6 +83,7 @@ pub struct DataState {
     pub epics: Vec<Epic>,
     pub current_iterations: Option<Vec<Iteration>>,
     pub active_story: Option<Story>,
+    pub async_handles: Vec<JoinHandle<()>>,
 }
 
 #[derive(Clone, Default, Debug)]
@@ -126,9 +128,10 @@ impl Model {
         let mut model = Model {
             data: DataState {
                 stories: cache.iteration_stories.clone().unwrap_or_default(),
-                epics: vec![],
+                epics: Vec::new(),
                 current_iterations: cache.current_iterations.clone(),
                 active_story: cache.active_story.clone(),
+                async_handles: Vec::new(),
             },
             ui: UiState::default(),
             config,

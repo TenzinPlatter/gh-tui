@@ -36,9 +36,9 @@ impl App {
         let (sender, receiver) = mpsc::unbounded_channel();
         let sender_clone = sender.clone();
 
-        let model = Model::from_cache_and_config(cache, config.clone());
+        let mut model = Model::from_cache_and_config(cache, config.clone());
         let api_client_clone = api_client.clone();
-        tokio::spawn(async move {
+        let init_handle = tokio::spawn(async move {
             match api_client_clone.get_current_iterations().await {
                 Ok(iterations) => {
                     let _ = sender.send(Msg::IterationsLoaded(iterations));
@@ -54,7 +54,9 @@ impl App {
             };
         });
 
-        Ok(Self {
+        model.data.async_handles.push(init_handle);
+
+        Ok(App {
             model,
             exit: false,
             receiver,
@@ -79,9 +81,10 @@ impl App {
         let model = Model {
             data: DataState {
                 stories: stories.clone(),
-                epics: vec![],
+                epics: Vec::new(),
                 current_iterations: Some(vec![iteration.clone()]),
                 active_story: None,
+                async_handles: Vec::new(),
             },
             ui: UiState::default(),
             config: config.clone(),
@@ -95,7 +98,7 @@ impl App {
             from_cache: false,
         });
 
-        Ok(Self {
+        Ok(App {
             model,
             exit: false,
             receiver,

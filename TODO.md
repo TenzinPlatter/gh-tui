@@ -4,8 +4,8 @@
 - [ ] Move action menu to use custom list
 - [ ] Fix active story not saving properly
 - [ ] Ask task queue with notifications for async tasks like api fetching etc. should be able to display multiple tasks at once
-- [ ] Make api fetching quit automatically if closing tui before they are finished
 
+- [x] Make api fetching quit automatically if closing tui before they are finished
 - [x] Make fzf for git worktree cancellable without crashing
 - [x] notes system
 - [x] move cache out of ~/.config
