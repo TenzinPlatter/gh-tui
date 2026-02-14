@@ -120,7 +120,7 @@ impl ActionMenuItem {
             Self::OpenNote => "Open Note",
             Self::EditDescription => "Edit Description",
             Self::OpenTmux => "Open Tmux Session",
-            Self::SetActive => "Set as Active Story",
+            Self::SetActive => "Toggle Active Story",
             Self::CreateGitWorktree => "Create git worktree",
             Self::OpenInBrowser => "Open ticket in browser",
         }
@@ -197,7 +197,7 @@ pub fn update(
                 }
 
                 ActionMenuItem::SetActive => {
-                    vec![Cmd::SelectStory(Some(story.clone()))]
+                    vec![Cmd::SelectStory(Some(story.clone())), Cmd::WriteCache]
                 }
 
                 ActionMenuItem::CreateGitWorktree => {
