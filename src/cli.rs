@@ -10,8 +10,8 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    #[command(alias = "o")]
-    Open,
+    #[command(alias = "n")]
+    Note,
 
     #[command(alias = "t")]
     Tmux,

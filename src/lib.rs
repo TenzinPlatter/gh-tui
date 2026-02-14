@@ -61,7 +61,7 @@ pub async fn handle_command(
     config: &Config,
 ) -> anyhow::Result<()> {
     match command {
-        Commands::Open => {
+        Commands::Note => {
             if let Some(story) = &cache.active_story {
                 let iteration_app_url = cache
                     .current_iterations_ref()
