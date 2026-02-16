@@ -1,5 +1,4 @@
 use anyhow::Context;
-use ratatui::{style::Style, text::Line, widgets::ListItem};
 use serde::{Deserialize, Serialize};
 use slugify::slugify;
 use uuid::Uuid;
