@@ -13,7 +13,6 @@ path = "src/main.rs"
 anyhow = "1.0.100"
 chrono = { version = "0.4.43", features = ["serde"] }
 clap = { version = "4.5.55", features = ["derive"] }
-color-eyre = "0.6.3"
 confy = "2.0.0"
 crossterm = "0.29.0"
 futures = "0.3.31"
@@ -25,9 +24,7 @@ serde_yaml = "0.9.34"
 shellexpand = "3.1.1"
 textwrap = "0.16"
 slugify = "0.1.0"
-subprocess = "1.0.0"
 tokio = { version = "1.49.0", features = ["full"] }
-toml = "1.0.1"
 uuid = { version = "1.19.0", features = ["serde", "v4"] }
 unicode-ellipsis = "0.3.0"
 tempfile = "3.24.0"
