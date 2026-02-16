@@ -239,8 +239,7 @@ impl App {
 
             KeyCode::Enter => return self.update(Msg::ToggleActionMenu),
 
-            // Open description modal with Space
-            KeyCode::Char(' ') => {
+            KeyCode::Char('d') => {
                 let story = self
                     .model
                     .ui

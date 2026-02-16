@@ -81,33 +81,6 @@ impl Story {
         format!("scn--{}", story_slug)
     }
 
-    pub fn into_list_item(&self, expanded: bool, selected: bool) -> ListItem<'static> {
-        let mut text = vec![
-            Line::from(self.name.to_string()),
-            Line::from("Description:"),
-        ];
-
-        if expanded {
-            for line in self.description.lines() {
-                text.push(Line::from(format!("  {}", line)));
-            }
-        } else {
-            text.push(
-                Line::from("  Press <Space> to view description").style(Style::default().italic()),
-            )
-        }
-
-        text.push(Line::from(""));
-
-        let style = if selected {
-            Style::default().reversed()
-        } else {
-            Style::default()
-        };
-
-        ListItem::new(text).style(style)
-    }
-
     pub fn get_file_name(&self) -> String {
         self.name.to_string()
     }
