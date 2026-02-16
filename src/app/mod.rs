@@ -105,6 +105,7 @@ impl App {
             ViewType::Stories => {
                 let story_list_view = StoryListView::new(
                     &self.model.data.stories,
+                    self.model.data.current_iterations.as_deref(),
                     &self.model.ui.story_list,
                     self.model.data.active_story.as_ref(),
                     true, // Always focused (single view)

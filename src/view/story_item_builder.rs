@@ -72,7 +72,7 @@ impl StoryItemWidget<'_> {
         // Story ID
         spans.push(Span::styled(
             format!("sc-{} ", self.story.id),
-            Style::default().fg(Color::Cyan),
+            Style::default().fg(Color::Blue),
         ));
 
         // Story name
