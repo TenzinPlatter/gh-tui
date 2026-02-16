@@ -33,6 +33,7 @@ pub enum StoryListMsg {
     TmuxEnter,
     EditStoryContents,
     OpenInBrowser,
+    ToggleFinished,
 }
 
 #[derive(Debug, Clone, Copy)]

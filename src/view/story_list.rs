@@ -29,10 +29,15 @@ pub struct IterationSection<'a> {
 fn group_stories_by_iteration<'a>(
     stories: &'a [Story],
     iterations: Option<&'a [Iteration]>,
+    show_finished: bool,
 ) -> Vec<IterationSection<'a>> {
     // Build a HashMap grouping stories by iteration_id
     let mut grouped: HashMap<Option<i32>, Vec<&'a Story>> = HashMap::new();
     for story in stories {
+        // Filter out completed stories if show_finished is false
+        if !show_finished && story.completed {
+            continue;
+        }
         grouped.entry(story.iteration_id).or_default().push(story);
     }
 
@@ -44,7 +49,10 @@ fn group_stories_by_iteration<'a>(
         sorted_iterations.sort_by_key(|it| it.start_date);
 
         for iteration in sorted_iterations {
-            if let Some(stories) = grouped.remove(&Some(iteration.id)) {
+            if let Some(mut stories) = grouped.remove(&Some(iteration.id)) {
+                // Sort: unfinished first, then completed
+                stories.sort_by_key(|s| s.completed);
+
                 sections.push(IterationSection {
                     iteration: Some(iteration),
                     stories,
@@ -54,7 +62,9 @@ fn group_stories_by_iteration<'a>(
     }
 
     // Add "No Iteration" section at the end if there are stories without an iteration
-    if let Some(stories) = grouped.remove(&None) {
+    if let Some(mut stories) = grouped.remove(&None) {
+        stories.sort_by_key(|s| s.completed);
+
         sections.push(IterationSection {
             iteration: None,
             stories,
@@ -128,7 +138,7 @@ impl<'a> WidgetRef for StoryListView<'a> {
         }
 
         // Group stories by iteration
-        let sections = group_stories_by_iteration(self.stories, self.iterations);
+        let sections = group_stories_by_iteration(self.stories, self.iterations, self.state.show_finished);
 
         // Determine highlight style based on focus
         let highlight_style = if self.is_focused {
@@ -210,6 +220,7 @@ impl<'a> WidgetRef for StoryListView<'a> {
                     Some(active) => active.id == story.id,
                     None => false,
                 };
+                let is_completed = story.completed;
 
                 let widget = StoryItemWidget::new(
                     story,
@@ -217,6 +228,7 @@ impl<'a> WidgetRef for StoryListView<'a> {
                     context.is_selected,
                     highlight_style,
                     width,
+                    is_completed,
                 );
                 let height = widget.height();
 

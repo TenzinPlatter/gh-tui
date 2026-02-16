@@ -24,10 +24,15 @@ struct IterationSection<'a> {
 fn group_stories_by_iteration<'a>(
     stories: &'a [Story],
     iterations: Option<&[&'a Iteration]>,
+    show_finished: bool,
 ) -> Vec<IterationSection<'a>> {
     // Build a HashMap grouping stories by iteration_id
     let mut grouped: HashMap<Option<i32>, Vec<&'a Story>> = HashMap::new();
     for story in stories {
+        // Filter out completed stories if show_finished is false
+        if !show_finished && story.completed {
+            continue;
+        }
         grouped.entry(story.iteration_id).or_default().push(story);
     }
 
@@ -39,7 +44,10 @@ fn group_stories_by_iteration<'a>(
         sorted_iterations.sort_by_key(|it| it.start_date);
 
         for iteration in sorted_iterations {
-            if let Some(stories) = grouped.remove(&Some(iteration.id)) {
+            if let Some(mut stories) = grouped.remove(&Some(iteration.id)) {
+                // Sort: unfinished first, then completed
+                stories.sort_by_key(|s| s.completed);
+
                 sections.push(IterationSection {
                     iteration: Some(iteration),
                     stories,
@@ -49,7 +57,9 @@ fn group_stories_by_iteration<'a>(
     }
 
     // Add "No Iteration" section at the end if there are stories without an iteration
-    if let Some(stories) = grouped.remove(&None) {
+    if let Some(mut stories) = grouped.remove(&None) {
+        stories.sort_by_key(|s| s.completed);
+
         sections.push(IterationSection {
             iteration: None,
             stories,
@@ -127,7 +137,7 @@ pub fn update(
             }
 
             // Group stories to handle section boundaries
-            let sections = group_stories_by_iteration(stories, current_iterations.as_deref());
+            let sections = group_stories_by_iteration(stories, current_iterations.as_deref(), state.show_finished);
 
             if let Some(current_id) = state.selected_story_id {
                 state.selected_story_id = next_story_id(current_id, &sections);
@@ -148,7 +158,7 @@ pub fn update(
             }
 
             // Group stories to handle section boundaries
-            let sections = group_stories_by_iteration(stories, current_iterations.as_deref());
+            let sections = group_stories_by_iteration(stories, current_iterations.as_deref(), state.show_finished);
 
             if let Some(current_id) = state.selected_story_id {
                 state.selected_story_id = prev_story_id(current_id, &sections);
@@ -215,6 +225,24 @@ pub fn update(
                 vec![Cmd::None]
             }
         }
+
+        StoryListMsg::ToggleFinished => {
+            state.show_finished = !state.show_finished;
+
+            // If hiding finished stories and selected story is completed,
+            // select first unfinished story
+            if !state.show_finished
+                && let Some(selected_id) = state.selected_story_id
+                && let Some(selected_story) = stories.iter().find(|s| s.id == selected_id)
+                && selected_story.completed
+            {
+                state.selected_story_id = stories.iter()
+                    .find(|s| !s.completed)
+                    .map(|s| s.id);
+            }
+
+            vec![Cmd::None]
+        }
     }
 }
 
@@ -229,6 +257,7 @@ pub fn key_to_msg(key: KeyEvent) -> Option<StoryListMsg> {
         navkey!(up) => Some(StoryListMsg::FocusPrev),
         KeyCode::Char('o') => Some(StoryListMsg::OpenInBrowser),
         KeyCode::Char('n') => Some(StoryListMsg::OpenNote),
+        KeyCode::Char('f') => Some(StoryListMsg::ToggleFinished),
         _ => None,
     }
 }

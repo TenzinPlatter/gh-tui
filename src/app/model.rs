@@ -105,9 +105,19 @@ pub struct UiState {
     pub throbber_state: ThrobberState,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct StoryListState {
     pub selected_story_id: Option<i32>,
+    pub show_finished: bool,
+}
+
+impl Default for StoryListState {
+    fn default() -> Self {
+        Self {
+            selected_story_id: Default::default(),
+            show_finished: true,
+        }
+    }
 }
 
 impl StoryListState {
