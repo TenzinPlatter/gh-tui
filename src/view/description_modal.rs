@@ -1,55 +1,28 @@
 use ratatui::{
     buffer::Buffer,
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::{Constraint, Direction, Layout, Rect, Size},
     style::{Modifier, Style},
     text::{Line, Text},
-    widgets::{Block, BorderType, Paragraph, Widget, Wrap},
+    widgets::{Block, BorderType, Paragraph, StatefulWidget, Widget, Wrap},
 };
+use tui_scrollview::{ScrollView, ScrollViewState};
 
 use crate::api::story::Story;
 
 pub struct DescriptionModal<'a> {
     story: &'a Story,
-    scroll_offset: u16,
 }
 
 impl<'a> DescriptionModal<'a> {
-    pub fn new(story: &'a Story, scroll_offset: u16) -> Self {
-        Self {
-            story,
-            scroll_offset,
-        }
-    }
-
-    /// Calculate the number of wrapped lines for the description given a width.
-    /// Used for scroll bounds calculation.
-    pub fn calculate_total_lines(description: &str, wrap_width: u16) -> u16 {
-        if wrap_width == 0 {
-            return 0;
-        }
-
-        let trimmed = description.trim();
-        if trimmed.is_empty() {
-            return 1; // "No description" placeholder
-        }
-
-        let mut total_lines = 0u16;
-        for line in trimmed.lines() {
-            if line.is_empty() {
-                total_lines += 1;
-            } else {
-                // Approximate wrapped line count
-                let chars = line.chars().count() as u16;
-                total_lines += (chars / wrap_width) + 1;
-            }
-        }
-
-        total_lines.max(1)
+    pub fn new(story: &'a Story) -> Self {
+        Self { story }
     }
 }
 
-impl Widget for DescriptionModal<'_> {
-    fn render(self, area: Rect, buf: &mut Buffer) {
+impl StatefulWidget for DescriptionModal<'_> {
+    type State = ScrollViewState;
+
+    fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         // Layout: title bar, divider, content, divider, footer
         let chunks = Layout::default()
             .direction(Direction::Vertical)
@@ -79,7 +52,8 @@ impl Widget for DescriptionModal<'_> {
         let divider = "─".repeat(chunks[1].width as usize);
         buf.set_string(chunks[1].x, chunks[1].y, &divider, Style::default());
 
-        // Description content with word wrap and scroll
+        // Description content with word wrap via ScrollView
+        let content_area = chunks[2];
         let trimmed = self.story.description.trim();
         let description = if trimmed.is_empty() {
             "No description".to_string()
@@ -88,10 +62,18 @@ impl Widget for DescriptionModal<'_> {
         };
 
         let paragraph = Paragraph::new(Text::from(description))
-            .wrap(Wrap { trim: false })
-            .scroll((self.scroll_offset, 0));
+            .wrap(Wrap { trim: false });
 
-        paragraph.render(chunks[2], buf);
+        let content_width = content_area.width;
+        let total_lines = paragraph.line_count(content_width) as u16;
+
+        let mut scroll_view =
+            ScrollView::new(Size::new(content_width, total_lines));
+        scroll_view.render_widget(
+            paragraph,
+            Rect::new(0, 0, content_width, total_lines),
+        );
+        scroll_view.render(content_area, buf, state);
 
         // Bottom divider
         buf.set_string(chunks[3].x, chunks[3].y, &divider, Style::default());
@@ -106,16 +88,4 @@ pub fn centered_rect(percent_x: u16, percent_y: u16, area: Rect) -> Rect {
     let y = (area.height - height) / 2;
 
     Rect::new(x, y, width, height)
-}
-
-/// Get the content area height (for scroll calculations)
-pub fn content_height(modal_area: Rect) -> u16 {
-    // Modal area minus: border (2) + title (1) + dividers (2) + footer (1) + margins (2)
-    modal_area.height.saturating_sub(8)
-}
-
-/// Get the content area width (for line wrap calculations)
-pub fn content_width(modal_area: Rect) -> u16 {
-    // Modal area minus: border (2) + margins (2)
-    modal_area.width.saturating_sub(4)
 }

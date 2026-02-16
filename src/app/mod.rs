@@ -143,9 +143,12 @@ impl App {
             let area = centered_rect(80, 80, frame.area());
             frame.render_widget(Clear, area);
 
-            let modal =
-                DescriptionModal::new(story, self.model.ui.description_modal.scroll_offset);
-            frame.render_widget(modal, area);
+            let modal = DescriptionModal::new(story);
+            frame.render_stateful_widget(
+                modal,
+                area,
+                &mut self.model.ui.description_modal.scroll_view_state,
+            );
         }
 
         self.draw_error(frame);

@@ -23,6 +23,7 @@
   - [ ] attach note as file to ticket
   - [ ] Change ticket state
   - [ ] Update days taken (do automatically when putting ticket to finished?)
+  - [ ] Blocking/blockers indicators (just amount) 
   - [ ] TODO: add todo points for epic/iteration integration
   - [x] Edit ticket description
 

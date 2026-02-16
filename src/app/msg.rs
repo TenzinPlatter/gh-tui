@@ -49,8 +49,8 @@ pub enum DescriptionModalMsg {
     Close,
     ScrollUp,
     ScrollDown,
-    ScrollHalfPageUp,
-    ScrollHalfPageDown,
+    ScrollPageUp,
+    ScrollPageDown,
     ScrollToTop,
     ScrollToBottom,
 }

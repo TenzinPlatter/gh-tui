@@ -10,7 +10,6 @@ use crate::{
     },
     dbg_file,
     error::ErrorInfo,
-    view::description_modal::DescriptionModal,
 };
 
 impl App {
@@ -86,6 +85,8 @@ impl App {
                         None => {
                             // Story gone — close modal, show error
                             self.model.ui.description_modal.is_showing = false;
+                            self.model.ui.description_modal.scroll_view_state =
+                                Default::default();
                             self.model.ui.description_modal.story = None;
                             self.model.ui.errors.push(ErrorInfo::new(
                                 "Story no longer available".to_string(),
@@ -196,28 +197,7 @@ impl App {
             }
 
             Msg::DescriptionModal(modal_msg) => {
-                // Calculate dimensions for scroll bounds
-                // Use a reasonable default if we can't get terminal size
-                let (visible_height, total_lines) = if let Some(story) =
-                    &self.model.ui.description_modal.story
-                {
-                    // Approximate based on typical terminal size
-                    // These will be recalculated properly during render
-                    let approx_height = 20u16;
-                    let approx_width = 60u16;
-                    let total =
-                        DescriptionModal::calculate_total_lines(&story.description, approx_width);
-                    (approx_height, total)
-                } else {
-                    (20, 0)
-                };
-
-                description_modal::update(
-                    &mut self.model.ui.description_modal,
-                    modal_msg,
-                    visible_height,
-                    total_lines,
-                )
+                description_modal::update(&mut self.model.ui.description_modal, modal_msg)
             }
         }
     }

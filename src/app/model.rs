@@ -1,5 +1,6 @@
 use throbber_widgets_tui::ThrobberState;
 use tokio::task::JoinHandle;
+use tui_scrollview::ScrollViewState;
 
 use crate::{
     api::{epic::Epic, iteration::Iteration, story::Story},
@@ -86,10 +87,10 @@ pub struct DataState {
     pub async_handles: Vec<JoinHandle<()>>,
 }
 
-#[derive(Clone, Default, Debug)]
+#[derive(Default, Debug)]
 pub struct DescriptionModalState {
     pub is_showing: bool,
-    pub scroll_offset: u16,
+    pub scroll_view_state: ScrollViewState,
     pub story: Option<Story>,
 }
 

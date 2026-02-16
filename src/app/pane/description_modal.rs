@@ -1,4 +1,5 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use tui_scrollview::ScrollViewState;
 
 use crate::{
     api::story::Story,
@@ -6,56 +7,46 @@ use crate::{
     navkey,
 };
 
-pub fn update(
-    state: &mut DescriptionModalState,
-    msg: DescriptionModalMsg,
-    visible_height: u16,
-    total_lines: u16,
-) -> Vec<Cmd> {
-    let max_scroll = total_lines.saturating_sub(visible_height);
-
+pub fn update(state: &mut DescriptionModalState, msg: DescriptionModalMsg) -> Vec<Cmd> {
     match msg {
         DescriptionModalMsg::Open => {
-            // Handled in main update - this shouldn't be called directly
             vec![Cmd::None]
         }
 
         DescriptionModalMsg::Close => {
             state.is_showing = false;
-            state.scroll_offset = 0;
+            state.scroll_view_state = ScrollViewState::default();
             state.story = None;
             vec![Cmd::None]
         }
 
         DescriptionModalMsg::ScrollUp => {
-            state.scroll_offset = state.scroll_offset.saturating_sub(1);
+            state.scroll_view_state.scroll_up();
             vec![Cmd::None]
         }
 
         DescriptionModalMsg::ScrollDown => {
-            state.scroll_offset = (state.scroll_offset + 1).min(max_scroll);
+            state.scroll_view_state.scroll_down();
             vec![Cmd::None]
         }
 
-        DescriptionModalMsg::ScrollHalfPageUp => {
-            let half_page = visible_height / 2;
-            state.scroll_offset = state.scroll_offset.saturating_sub(half_page);
+        DescriptionModalMsg::ScrollPageUp => {
+            state.scroll_view_state.scroll_page_up();
             vec![Cmd::None]
         }
 
-        DescriptionModalMsg::ScrollHalfPageDown => {
-            let half_page = visible_height / 2;
-            state.scroll_offset = (state.scroll_offset + half_page).min(max_scroll);
+        DescriptionModalMsg::ScrollPageDown => {
+            state.scroll_view_state.scroll_page_down();
             vec![Cmd::None]
         }
 
         DescriptionModalMsg::ScrollToTop => {
-            state.scroll_offset = 0;
+            state.scroll_view_state.scroll_to_top();
             vec![Cmd::None]
         }
 
         DescriptionModalMsg::ScrollToBottom => {
-            state.scroll_offset = max_scroll;
+            state.scroll_view_state.scroll_to_bottom();
             vec![Cmd::None]
         }
     }
@@ -63,7 +54,7 @@ pub fn update(
 
 pub fn open(state: &mut DescriptionModalState, story: Story) {
     state.is_showing = true;
-    state.scroll_offset = 0;
+    state.scroll_view_state = ScrollViewState::default();
     state.story = Some(story);
 }
 
@@ -73,13 +64,13 @@ pub fn key_to_msg(key: KeyEvent) -> Option<DescriptionModalMsg> {
         navkey!(down) => Some(DescriptionModalMsg::ScrollDown),
         navkey!(up) => Some(DescriptionModalMsg::ScrollUp),
         KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-            Some(DescriptionModalMsg::ScrollHalfPageDown)
+            Some(DescriptionModalMsg::ScrollPageDown)
         }
         KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-            Some(DescriptionModalMsg::ScrollHalfPageUp)
+            Some(DescriptionModalMsg::ScrollPageUp)
         }
-        KeyCode::PageDown => Some(DescriptionModalMsg::ScrollHalfPageDown),
-        KeyCode::PageUp => Some(DescriptionModalMsg::ScrollHalfPageUp),
+        KeyCode::PageDown => Some(DescriptionModalMsg::ScrollPageDown),
+        KeyCode::PageUp => Some(DescriptionModalMsg::ScrollPageUp),
         KeyCode::Char('g') => Some(DescriptionModalMsg::ScrollToTop),
         KeyCode::Char('G') => Some(DescriptionModalMsg::ScrollToBottom),
         _ => None,
@@ -113,7 +104,6 @@ mod tests {
         open(&mut state, story.clone());
 
         assert!(state.is_showing);
-        assert_eq!(state.scroll_offset, 0);
         assert_eq!(state.story.as_ref().unwrap().id, story.id);
     }
 
@@ -121,93 +111,14 @@ mod tests {
     fn test_close_resets_state() {
         let mut state = DescriptionModalState {
             is_showing: true,
-            scroll_offset: 10,
+            scroll_view_state: ScrollViewState::default(),
             story: Some(create_test_story()),
         };
 
-        update(&mut state, DescriptionModalMsg::Close, 20, 50);
+        update(&mut state, DescriptionModalMsg::Close);
 
         assert!(!state.is_showing);
-        assert_eq!(state.scroll_offset, 0);
         assert!(state.story.is_none());
-    }
-
-    #[test]
-    fn test_scroll_down_increments() {
-        let mut state = DescriptionModalState {
-            is_showing: true,
-            scroll_offset: 0,
-            story: Some(create_test_story()),
-        };
-
-        update(&mut state, DescriptionModalMsg::ScrollDown, 20, 50);
-
-        assert_eq!(state.scroll_offset, 1);
-    }
-
-    #[test]
-    fn test_scroll_down_clamps_to_max() {
-        let mut state = DescriptionModalState {
-            is_showing: true,
-            scroll_offset: 30, // max_scroll = 50 - 20 = 30
-            story: Some(create_test_story()),
-        };
-
-        update(&mut state, DescriptionModalMsg::ScrollDown, 20, 50);
-
-        assert_eq!(state.scroll_offset, 30); // Should not exceed max
-    }
-
-    #[test]
-    fn test_scroll_up_decrements() {
-        let mut state = DescriptionModalState {
-            is_showing: true,
-            scroll_offset: 5,
-            story: Some(create_test_story()),
-        };
-
-        update(&mut state, DescriptionModalMsg::ScrollUp, 20, 50);
-
-        assert_eq!(state.scroll_offset, 4);
-    }
-
-    #[test]
-    fn test_scroll_up_clamps_to_zero() {
-        let mut state = DescriptionModalState {
-            is_showing: true,
-            scroll_offset: 0,
-            story: Some(create_test_story()),
-        };
-
-        update(&mut state, DescriptionModalMsg::ScrollUp, 20, 50);
-
-        assert_eq!(state.scroll_offset, 0);
-    }
-
-    #[test]
-    fn test_scroll_to_top() {
-        let mut state = DescriptionModalState {
-            is_showing: true,
-            scroll_offset: 25,
-            story: Some(create_test_story()),
-        };
-
-        update(&mut state, DescriptionModalMsg::ScrollToTop, 20, 50);
-
-        assert_eq!(state.scroll_offset, 0);
-    }
-
-    #[test]
-    fn test_scroll_to_bottom() {
-        let mut state = DescriptionModalState {
-            is_showing: true,
-            scroll_offset: 0,
-            story: Some(create_test_story()),
-        };
-
-        update(&mut state, DescriptionModalMsg::ScrollToBottom, 20, 50);
-
-        assert_eq!(state.scroll_offset, 30); // max_scroll = 50 - 20
     }
 
     #[test]
@@ -237,6 +148,26 @@ mod tests {
         assert!(matches!(
             key_to_msg(make_key(KeyCode::Char('k'), KeyModifiers::NONE)),
             Some(DescriptionModalMsg::ScrollUp)
+        ));
+
+        assert!(matches!(
+            key_to_msg(make_key(KeyCode::Char('d'), KeyModifiers::CONTROL)),
+            Some(DescriptionModalMsg::ScrollPageDown)
+        ));
+
+        assert!(matches!(
+            key_to_msg(make_key(KeyCode::Char('u'), KeyModifiers::CONTROL)),
+            Some(DescriptionModalMsg::ScrollPageUp)
+        ));
+
+        assert!(matches!(
+            key_to_msg(make_key(KeyCode::PageDown, KeyModifiers::NONE)),
+            Some(DescriptionModalMsg::ScrollPageDown)
+        ));
+
+        assert!(matches!(
+            key_to_msg(make_key(KeyCode::PageUp, KeyModifiers::NONE)),
+            Some(DescriptionModalMsg::ScrollPageUp)
         ));
 
         assert!(matches!(
