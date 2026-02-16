@@ -25,9 +25,9 @@ serde_yaml = "0.9.34"
 shellexpand = "3.1.1"
 textwrap = "0.16"
 slugify = "0.1.0"
-subprocess = "0.2.13"
+subprocess = "1.0.0"
 tokio = { version = "1.49.0", features = ["full"] }
-toml = "0.9.11"
+toml = "1.0.1"
 uuid = { version = "1.19.0", features = ["serde", "v4"] }
 unicode-ellipsis = "0.3.0"
 tempfile = "3.24.0"
