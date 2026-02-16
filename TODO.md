@@ -6,6 +6,8 @@
 - [ ] Ask task queue with notifications for async tasks like api fetching etc. should be able to display multiple tasks at once
 - [ ] Some task is still blocking on close sometimes, maybe story fetching idk, need to investigate
 - [ ] Move description modal toggle into StoryListMsg
+- [ ] Copy info to clipboard (e.g. branch name)
+- [ ] create branch on repo
 
 - [x] Make api fetching quit automatically if closing tui before they are finished
 - [x] Make fzf for git worktree cancellable without crashing
@@ -26,7 +28,7 @@
   - [ ] attach note as file to ticket
   - [ ] Change ticket state
   - [ ] Update days taken (do automatically when putting ticket to finished?)
-  - [ ] Blocking/blockers indicators (just amount) 
+  - [ ] Blocking/blockers indicators (just amount)
   - [ ] TODO: add todo points for epic/iteration integration
   - [x] Edit ticket description
 

@@ -140,13 +140,6 @@ impl<'a> WidgetRef for StoryListView<'a> {
         // Group stories by iteration
         let sections = group_stories_by_iteration(self.stories, self.iterations, self.state.show_finished);
 
-        // Determine highlight style based on focus
-        let highlight_style = if self.is_focused {
-            Style::default().blue().bold()
-        } else {
-            Style::default()
-        };
-
         // Calculate layout constraints for sections
         let mut constraints = Vec::new();
         for section in &sections {
@@ -213,6 +206,7 @@ impl<'a> WidgetRef for StoryListView<'a> {
             let section_stories: Vec<_> = section.stories.to_vec();
             let active_story = self.active_story;
             let width = stories_area.width;
+            let selected_story_id = self.state.selected_story_id;
 
             let builder = ListBuilder::new(move |context| {
                 let story = section_stories[context.index];
@@ -222,11 +216,19 @@ impl<'a> WidgetRef for StoryListView<'a> {
                 };
                 let is_completed = story.completed;
 
+                // Check if the next story is selected
+                let next_is_selected = if context.index + 1 < section_stories.len() {
+                    let next_story = section_stories[context.index + 1];
+                    Some(next_story.id) == selected_story_id
+                } else {
+                    false
+                };
+
                 let widget = StoryItemWidget::new(
                     story,
                     is_active,
                     context.is_selected,
-                    highlight_style,
+                    next_is_selected,
                     width,
                     is_completed,
                 );
