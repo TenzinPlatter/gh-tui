@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
 use crate::{
@@ -13,7 +15,10 @@ use crate::{
 };
 
 impl App {
-    pub fn update(&mut self, msg: Msg) -> Vec<Cmd> {
+    pub fn update(
+        &mut self,
+        msg: Msg,
+    ) -> Vec<Cmd> {
         dbg_file!("Update: {:?}", msg);
 
         match msg {
@@ -85,8 +90,7 @@ impl App {
                         None => {
                             // Story gone — close modal, show error
                             self.model.ui.description_modal.is_showing = false;
-                            self.model.ui.description_modal.scroll_view_state =
-                                Default::default();
+                            self.model.ui.description_modal.scroll_view_state = Default::default();
                             self.model.ui.description_modal.story = None;
                             self.model.ui.errors.push(ErrorInfo::new(
                                 "Story no longer available".to_string(),
@@ -238,6 +242,16 @@ impl App {
             }
 
             KeyCode::Enter => return self.update(Msg::ToggleActionMenu),
+
+            KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                let today = crate::time::today();
+                let path = PathBuf::from(format!(
+                    "{}/daily-{}.md",
+                    self.config.notes_dir.display(),
+                    today
+                ));
+                return vec![Cmd::OpenDailyNote { path }];
+            }
 
             KeyCode::Char('d') => {
                 let story = self

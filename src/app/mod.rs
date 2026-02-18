@@ -1,13 +1,22 @@
+use std::fs::read_to_string;
+use std::io::Write;
+
 use anyhow::Result;
+use crossterm::ExecutableCommand;
+use crossterm::terminal::{
+    EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
+};
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::widgets::{Block, Clear, Paragraph, StatefulWidget, WidgetRef};
-use ratatui::{DefaultTerminal, Frame, widgets::FrameExt};
+use ratatui::{DefaultTerminal, Frame};
+use tempfile::NamedTempFile;
 use tokio::sync::mpsc;
 
 use crate::app::pane::action_menu::ActionMenu;
-use crate::error::ERROR_NOTIFICATION_MAX_HEIGHT;
+use crate::error::{ERROR_NOTIFICATION_MAX_HEIGHT, ErrorInfo};
 use crate::view::description_modal::{DescriptionModal, centered_rect};
 use crate::view::{navbar::NavBar, story_list::StoryListView};
+use crate::worktree::{create_worktree, get_repo_list, select_repo_with_fzf};
 use crate::{api::ApiClient, app::model::ViewType, config::Config};
 
 pub mod cmd;
@@ -35,16 +44,121 @@ impl App {
                 let commands = self.update(msg);
 
                 for cmd in commands {
-                    cmd::execute(
-                        cmd,
-                        self.sender.clone(),
-                        &mut self.model,
-                        &self.api_client,
-                        terminal,
-                    )
-                    .await?;
+                    match cmd {
+                        cmd::Cmd::OpenNote { .. }
+                        | cmd::Cmd::OpenIterationNote { .. }
+                        | cmd::Cmd::EditStoryContent { .. }
+                        | cmd::Cmd::CreateGitWorktree { .. }
+                        | cmd::Cmd::OpenDailyNote { .. } => {
+                            self.handle_suspended_cmd(cmd, terminal).await?;
+                        }
+                        _ => {
+                            cmd::execute(
+                                cmd,
+                                self.sender.clone(),
+                                &mut self.model,
+                                &self.api_client,
+                            )
+                            .await?;
+                        }
+                    }
                 }
             }
+        }
+
+        Ok(())
+    }
+
+    async fn handle_suspended_cmd(
+        &mut self,
+        cmd: cmd::Cmd,
+        terminal: &mut DefaultTerminal,
+    ) -> Result<()> {
+        match cmd {
+            cmd::Cmd::OpenNote {
+                story_id,
+                story_name,
+                story_app_url,
+                iteration_app_url,
+            } => {
+                with_suspended_tui(terminal, || {
+                    cmd::open_note_in_editor(
+                        story_id,
+                        story_name,
+                        story_app_url,
+                        iteration_app_url,
+                        &self.model.config,
+                    )
+                })?;
+                self.sender.send(msg::Msg::NoteOpened).ok();
+            }
+
+            cmd::Cmd::OpenIterationNote {
+                iteration_id,
+                iteration_name,
+                iteration_app_url,
+            } => {
+                with_suspended_tui(terminal, || {
+                    cmd::open_iteration_note_in_editor(
+                        iteration_id,
+                        iteration_name,
+                        iteration_app_url,
+                        &self.model.config,
+                    )
+                })?;
+                self.sender.send(msg::Msg::NoteOpened).ok();
+            }
+
+            cmd::Cmd::EditStoryContent {
+                story_id,
+                description,
+            } => {
+                let config_editor = self.model.config.editor.clone();
+                let edited = with_suspended_tui(terminal, || {
+                    let mut tempfile = NamedTempFile::new()?;
+                    tempfile.write_all(description.as_bytes())?;
+                    let tmp_path = tempfile.path().to_path_buf();
+
+                    std::process::Command::new(&config_editor)
+                        .arg(&tmp_path)
+                        .status()?;
+
+                    let contents = read_to_string(&tmp_path)?;
+                    Ok(contents)
+                })?;
+
+                if edited != description {
+                    self.api_client
+                        .update_story_description(story_id, edited)
+                        .await?;
+                }
+            }
+
+            cmd::Cmd::CreateGitWorktree { branch_name } => {
+                let repos = get_repo_list(&self.model.config).await?;
+                let chosen = match with_suspended_tui(terminal, || select_repo_with_fzf(&repos)) {
+                    Ok(repo) => repo,
+                    Err(e) => {
+                        self.model
+                            .ui
+                            .errors
+                            .push(ErrorInfo::new("Failed to get repo for worktree", e));
+                        return Ok(());
+                    }
+                };
+
+                let path = self.model.config.repositories_directory.join(chosen);
+                create_worktree(&path, &branch_name).await?;
+            }
+
+            cmd::Cmd::OpenDailyNote { path } => {
+                with_suspended_tui(terminal, || {
+                    cmd::open_in_editor(&self.model.config, &path)
+                })?;
+                self.sender.send(msg::Msg::NoteOpened).ok();
+            }
+
+            _ => unreachable!("Non-suspending command passed to handle_suspended_cmd"),
         }
 
         Ok(())
@@ -183,4 +297,17 @@ impl App {
             error.render_ref(area, frame.buffer_mut());
         }
     }
+}
+
+fn with_suspended_tui<F, T>(terminal: &mut DefaultTerminal, f: F) -> anyhow::Result<T>
+where
+    F: FnOnce() -> anyhow::Result<T>,
+{
+    std::io::stdout().execute(LeaveAlternateScreen)?;
+    disable_raw_mode()?;
+    let result = f();
+    std::io::stdout().execute(EnterAlternateScreen)?;
+    enable_raw_mode()?;
+    terminal.clear()?;
+    result
 }

@@ -5,11 +5,6 @@ use std::{
 };
 
 use anyhow::Context;
-use crossterm::{
-    ExecutableCommand,
-    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
-};
-use ratatui::DefaultTerminal;
 use slugify::slugify;
 use tokio::process::Command as TokioCommand;
 use which::which;
@@ -96,13 +91,7 @@ pub async fn get_repo_list(config: &Config) -> anyhow::Result<String> {
     Ok(standard.join("\n"))
 }
 
-pub fn select_repo_with_fzf(
-    repo_list: &str,
-    terminal: &mut DefaultTerminal,
-) -> anyhow::Result<String> {
-    std::io::stdout().execute(LeaveAlternateScreen)?;
-    disable_raw_mode()?;
-
+pub fn select_repo_with_fzf(repo_list: &str) -> anyhow::Result<String> {
     let mut fzf = StdCommand::new("fzf")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -115,10 +104,6 @@ pub fn select_repo_with_fzf(
         .write_all(repo_list.as_bytes())?;
 
     let output = fzf.wait_with_output()?;
-
-    std::io::stdout().execute(EnterAlternateScreen)?;
-    enable_raw_mode()?;
-    terminal.clear()?;
 
     if !output.status.success() {
         anyhow::bail!("fzf was cancelled or failed");

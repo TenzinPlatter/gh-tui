@@ -1,13 +1,6 @@
-use std::{
-    fs,
-    process::{Command, Output},
-};
+use std::fs;
 
 use anyhow::Context;
-use crossterm::{
-    ExecutableCommand,
-    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
-};
 use ratatui::DefaultTerminal;
 use uuid::Uuid;
 
@@ -122,18 +115,3 @@ pub async fn handle_command(
     }
 }
 
-pub fn execute_for_output(
-    mut command: Command,
-    terminal: &mut DefaultTerminal,
-) -> anyhow::Result<Output> {
-    std::io::stdout().execute(LeaveAlternateScreen)?;
-    disable_raw_mode()?;
-
-    let result = command.output();
-
-    std::io::stdout().execute(EnterAlternateScreen)?;
-    enable_raw_mode()?;
-    terminal.clear()?;
-
-    Ok(result?)
-}

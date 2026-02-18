@@ -1,22 +1,18 @@
-use std::io::{Stdout, Write};
-
-use anyhow::{Context, Result};
-use crossterm::ExecutableCommand;
-use crossterm::terminal::{
-    EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
-};
-use ratatui::{Terminal, prelude::CrosstermBackend};
+use std::fs::File;
+use std::io::Write;
+use std::path::{Path, PathBuf};
 use std::{
     fs::{OpenOptions, create_dir_all, read_to_string},
     process::Command,
 };
-use tempfile::NamedTempFile;
+
+use anyhow::{Context, Result};
+use slugify::slugify;
 use tokio::sync::mpsc::UnboundedSender;
 
 use crate::app::model::Model;
 use crate::error::ErrorInfo;
 use crate::tmux::{session_attach, session_create, session_exists};
-use crate::worktree::{create_worktree, get_repo_list, select_repo_with_fzf};
 use crate::{
     api::{ApiClient, story::Story},
     app::msg::Msg,
@@ -60,6 +56,9 @@ pub enum Cmd {
         iteration_name: String,
         iteration_app_url: String,
     },
+    OpenDailyNote {
+        path: PathBuf,
+    },
 }
 
 pub async fn execute(
@@ -67,28 +66,9 @@ pub async fn execute(
     sender: UnboundedSender<Msg>,
     model: &mut Model,
     api_client: &ApiClient,
-    terminal: &mut Terminal<CrosstermBackend<Stdout>>,
 ) -> Result<()> {
     match cmd {
         Cmd::None => Ok(()),
-
-        Cmd::OpenNote {
-            story_id,
-            story_name,
-            story_app_url,
-            iteration_app_url,
-        } => {
-            open_note_in_editor_tui(
-                story_id,
-                story_name,
-                story_app_url,
-                iteration_app_url,
-                &model.config,
-                terminal,
-            )?;
-            sender.send(Msg::NoteOpened).ok();
-            Ok(())
-        }
 
         Cmd::WriteCache => {
             model.cache.write()?;
@@ -148,7 +128,7 @@ pub async fn execute(
 
         Cmd::Batch(commands) => {
             for cmd in commands {
-                Box::pin(execute(cmd, sender.clone(), model, api_client, terminal)).await?;
+                Box::pin(execute(cmd, sender.clone(), model, api_client)).await?;
             }
 
             Ok(())
@@ -157,35 +137,6 @@ pub async fn execute(
         Cmd::OpenTmuxSession { story_name } => {
             let session_name = Story::tmux_session_name(&story_name);
             open_tmux_session(&session_name).await?;
-            Ok(())
-        }
-
-        Cmd::EditStoryContent {
-            story_id,
-            description,
-        } => {
-            // TODO: this only works for editors that run from their process, i.e. code spawns the
-            // vscode gui, then ends itself, will not work as it is now
-            let mut tempfile = NamedTempFile::new()?;
-            tempfile.write_all(description.as_bytes())?;
-
-            let tmp_path = tempfile.path();
-
-            std::io::stdout().execute(LeaveAlternateScreen)?;
-            disable_raw_mode()?;
-
-            Command::new(&model.config.editor).arg(tmp_path).status()?;
-
-            std::io::stdout().execute(EnterAlternateScreen)?;
-            enable_raw_mode()?;
-            terminal.clear()?;
-
-            let contents = read_to_string(tmp_path)?;
-            if contents != description {
-                api_client
-                    .update_story_description(story_id, contents)
-                    .await?;
-            }
             Ok(())
         }
 
@@ -202,45 +153,43 @@ pub async fn execute(
             Ok(())
         }
 
-        Cmd::CreateGitWorktree { branch_name } => {
-            let repos = get_repo_list(&model.config).await?;
-            let chosen = match select_repo_with_fzf(&repos, terminal) {
-                Ok(repo) => repo,
-                Err(e) => {
-                    model
-                        .ui
-                        .errors
-                        .push(ErrorInfo::new("Failed to get repo for worktree", e));
-                    return Ok(());
-                }
-            };
-
-            let path = model.config.repositories_directory.join(chosen);
-            create_worktree(&path, &branch_name).await?;
-
-            Ok(())
-        }
-
         Cmd::OpenInBrowser { app_url } => {
             open::that(&app_url).with_context(|| format!("Failed to open {} in browser", app_url))
         }
 
-        Cmd::OpenIterationNote {
-            iteration_id,
-            iteration_name,
-            iteration_app_url,
-        } => {
-            open_iteration_note_in_editor_tui(
-                iteration_id,
-                iteration_name,
-                iteration_app_url,
-                &model.config,
-                terminal,
-            )?;
-            sender.send(Msg::NoteOpened).ok();
-            Ok(())
+        // TUI-suspending commands are handled in main_loop, not here
+        Cmd::OpenNote { .. }
+        | Cmd::OpenIterationNote { .. }
+        | Cmd::EditStoryContent { .. }
+        | Cmd::CreateGitWorktree { .. }
+        | Cmd::OpenDailyNote { .. } => {
+            unreachable!("TUI-suspending commands should be handled in main_loop")
         }
     }
+}
+
+pub fn open_in_editor(config: &Config, path: &Path) -> anyhow::Result<()> {
+    if path.is_dir() {
+        anyhow::bail!("Note path: {} is not a file", path.display());
+    }
+
+    if let Some(p) = path.parent() {
+        create_dir_all(p)?;
+    }
+
+    if !path.is_file() {
+        File::create(path)?;
+    }
+
+    dbg_file!("Opening in editor: {}", path.display());
+
+    let res = Command::new(&config.editor).arg(path).status()?;
+
+    if !res.success() {
+        anyhow::bail!("Failed to open {} in editor", path.display());
+    }
+
+    Ok(())
 }
 
 pub fn open_note_in_editor(
@@ -258,66 +207,17 @@ pub fn open_note_in_editor(
         iteration_app_url,
     );
 
-    if note.path.is_dir() {
-        anyhow::bail!("Note path: {} is not a file", note.path.display());
-    }
-
-    if let Some(p) = note.path.parent() {
-        create_dir_all(p)?;
-    }
-
-    dbg_file!("Opening note: {}", note.path.display());
-
-    let mut f = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .read(true)
-        .open(&note.path)?;
-    let buf = read_to_string(&note.path)?;
-
-    if buf.is_empty() {
-        dbg_file!("Writing frontmatter to {}", note.path.display());
-        note.write_frontmatter(&mut f)?;
-    }
-
-    Command::new(&config.editor).arg(note.path).status()?;
+    open_in_editor(config, &note.path)?;
 
     Ok(())
 }
 
-pub fn open_note_in_editor_tui(
-    story_id: i32,
-    story_name: String,
-    story_app_url: String,
-    iteration_app_url: Option<String>,
-    config: &Config,
-    terminal: &mut Terminal<CrosstermBackend<Stdout>>,
-) -> anyhow::Result<()> {
-    std::io::stdout().execute(LeaveAlternateScreen)?;
-    disable_raw_mode()?;
-
-    let result = open_note_in_editor(
-        story_id,
-        story_name,
-        story_app_url,
-        iteration_app_url,
-        config,
-    );
-
-    std::io::stdout().execute(EnterAlternateScreen)?;
-    enable_raw_mode()?;
-    terminal.clear()?;
-
-    result
-}
-
-fn open_iteration_note_in_editor(
+pub fn open_iteration_note_in_editor(
     iteration_id: i32,
     iteration_name: String,
     iteration_app_url: String,
     config: &Config,
 ) -> anyhow::Result<()> {
-    use slugify::slugify;
     let slug = slugify!(&iteration_name);
     let mut path = config.notes_dir.clone();
     path.push(format!("{}.md", slug));
@@ -346,30 +246,6 @@ fn open_iteration_note_in_editor(
 
     Command::new(&config.editor).arg(&path).status()?;
     Ok(())
-}
-
-fn open_iteration_note_in_editor_tui(
-    iteration_id: i32,
-    iteration_name: String,
-    iteration_app_url: String,
-    config: &Config,
-    terminal: &mut Terminal<CrosstermBackend<Stdout>>,
-) -> anyhow::Result<()> {
-    std::io::stdout().execute(LeaveAlternateScreen)?;
-    disable_raw_mode()?;
-
-    let result = open_iteration_note_in_editor(
-        iteration_id,
-        iteration_name,
-        iteration_app_url,
-        config,
-    );
-
-    std::io::stdout().execute(EnterAlternateScreen)?;
-    enable_raw_mode()?;
-    terminal.clear()?;
-
-    result
 }
 
 pub async fn open_tmux_session(name: &str) -> anyhow::Result<()> {
