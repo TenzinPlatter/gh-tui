@@ -41,3 +41,4 @@
 - [ ] git integration:
   - [ ] Copy info to clipboard (e.g. branch name)
   - [ ] create branch on repo
+  - [ ] How do i get the correct branch name for a story?????

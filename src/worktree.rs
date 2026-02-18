@@ -22,41 +22,78 @@ pub fn check_worktree_dependencies() -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Returns a string with newline seperated repo names
-pub async fn get_repo_list(config: &Config) -> anyhow::Result<String> {
-    let fd_output = TokioCommand::new("fd")
-        .args([
-            "-t",
-            "d",
-            "-I",
-            "-H",
-            "^\\.git$",
-            config.repositories_directory.to_str().unwrap(),
-            "-x",
-            "dirname",
-            "{}",
-        ])
+/// Finds repos that have a .git directory (regular repos).
+async fn find_standard_repos(repos_dir: &str) -> anyhow::Result<Vec<String>> {
+    let output = TokioCommand::new("fd")
+        .args(["-t", "d", "-I", "-H", "^\\.git$", repos_dir, "-x", "dirname", "{}"])
         .output()
         .await?;
 
-    if !fd_output.status.success() {
-        anyhow::bail!(
-            "fd failed with stderr: {}",
-            String::from_utf8_lossy(fd_output.stderr.as_slice())
-        );
+    if !output.status.success() {
+        anyhow::bail!("fd failed: {}", String::from_utf8_lossy(&output.stderr));
     }
 
-    let stdout = String::from_utf8_lossy(&fd_output.stdout).to_string();
-    Ok(stdout
+    let prefix = format!("{}/", repos_dir);
+    Ok(String::from_utf8_lossy(&output.stdout)
         .lines()
-        .map(|line| {
-            line.replace(
-                &format!("{}/", config.repositories_directory.to_str().unwrap()),
-                "",
-            )
+        .map(|l| l.replace(&prefix, ""))
+        .filter(|l| !l.is_empty())
+        .collect())
+}
+
+/// Finds repos that have a .git file pointing to a modules dir (submodules).
+/// Excludes worktree .git files, which point to a worktrees dir instead.
+async fn find_submodule_repos(repos_dir: &str) -> anyhow::Result<Vec<String>> {
+    let output = TokioCommand::new("fd")
+        .args(["-t", "f", "-I", "-H", "^\\.git$", repos_dir])
+        .output()
+        .await?;
+
+    if !output.status.success() {
+        anyhow::bail!("fd failed: {}", String::from_utf8_lossy(&output.stderr));
+    }
+
+    let prefix = format!("{}/", repos_dir);
+    let git_files: Vec<String> = String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .map(|l| l.to_string())
+        .collect();
+
+    let contents: Vec<Option<(String, String)>> = futures::future::join_all(
+        git_files.into_iter().map(|git_file| async move {
+            let content = tokio::fs::read_to_string(&git_file).await.ok()?;
+            Some((git_file, content))
         })
-        .collect::<Vec<_>>()
-        .join("\n"))
+    ).await;
+
+    Ok(contents
+        .into_iter()
+        .flatten()
+        .filter(|(_, content)| !content.contains("worktrees"))
+        .map(|(git_file, _)| {
+            Path::new(&git_file)
+                .parent()
+                .and_then(|p| p.to_str())
+                .unwrap_or("")
+                .replace(&prefix, "")
+        })
+        .filter(|p| !p.is_empty())
+        .collect())
+}
+
+/// Returns a string with newline seperated repo names
+pub async fn get_repo_list(config: &Config) -> anyhow::Result<String> {
+    let repos_dir = config.repositories_directory.to_str().unwrap();
+
+    let (mut standard, submodules) = tokio::try_join!(
+        find_standard_repos(repos_dir),
+        find_submodule_repos(repos_dir),
+    )?;
+
+    standard.extend(submodules);
+    standard.sort();
+    standard.dedup();
+    Ok(standard.join("\n"))
 }
 
 pub fn select_repo_with_fzf(
