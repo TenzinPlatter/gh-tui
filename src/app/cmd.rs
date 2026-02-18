@@ -55,6 +55,11 @@ pub enum Cmd {
     OpenInBrowser {
         app_url: String,
     },
+    OpenIterationNote {
+        iteration_id: i32,
+        iteration_name: String,
+        iteration_app_url: String,
+    },
 }
 
 pub async fn execute(
@@ -219,6 +224,22 @@ pub async fn execute(
         Cmd::OpenInBrowser { app_url } => {
             open::that(&app_url).with_context(|| format!("Failed to open {} in browser", app_url))
         }
+
+        Cmd::OpenIterationNote {
+            iteration_id,
+            iteration_name,
+            iteration_app_url,
+        } => {
+            open_iteration_note_in_editor_tui(
+                iteration_id,
+                iteration_name,
+                iteration_app_url,
+                &model.config,
+                terminal,
+            )?;
+            sender.send(Msg::NoteOpened).ok();
+            Ok(())
+        }
     }
 }
 
@@ -279,6 +300,67 @@ pub fn open_note_in_editor_tui(
         story_id,
         story_name,
         story_app_url,
+        iteration_app_url,
+        config,
+    );
+
+    std::io::stdout().execute(EnterAlternateScreen)?;
+    enable_raw_mode()?;
+    terminal.clear()?;
+
+    result
+}
+
+fn open_iteration_note_in_editor(
+    iteration_id: i32,
+    iteration_name: String,
+    iteration_app_url: String,
+    config: &Config,
+) -> anyhow::Result<()> {
+    use slugify::slugify;
+    let slug = slugify!(&iteration_name);
+    let mut path = config.notes_dir.clone();
+    path.push(format!("{}.md", slug));
+
+    if path.is_dir() {
+        anyhow::bail!("Note path: {} is not a file", path.display());
+    }
+    if let Some(p) = path.parent() {
+        create_dir_all(p)?;
+    }
+
+    let mut f = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .read(true)
+        .open(&path)?;
+    let buf = read_to_string(&path)?;
+    if buf.is_empty() {
+        let today = crate::time::today();
+        let frontmatter = format!(
+            "---\niteration_id: it-{}\niteration_link: {}\niteration_name: {}\ncreated: {}\n---\n",
+            iteration_id, iteration_app_url, iteration_name, today
+        );
+        f.write_all(frontmatter.as_bytes())?;
+    }
+
+    Command::new(&config.editor).arg(&path).status()?;
+    Ok(())
+}
+
+fn open_iteration_note_in_editor_tui(
+    iteration_id: i32,
+    iteration_name: String,
+    iteration_app_url: String,
+    config: &Config,
+    terminal: &mut Terminal<CrosstermBackend<Stdout>>,
+) -> anyhow::Result<()> {
+    std::io::stdout().execute(LeaveAlternateScreen)?;
+    disable_raw_mode()?;
+
+    let result = open_iteration_note_in_editor(
+        iteration_id,
+        iteration_name,
         iteration_app_url,
         config,
     );

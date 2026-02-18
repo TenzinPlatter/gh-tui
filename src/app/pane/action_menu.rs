@@ -15,6 +15,7 @@ use crate::{
         model::{DataState, UiState},
         msg::ActionMenuMsg,
     },
+    error::ErrorInfo,
     navkey,
     view::ActionItemWidget,
 };
@@ -100,6 +101,7 @@ impl StatefulWidget for ActionMenu {
 #[derive(Clone, Copy)]
 pub enum ActionMenuItem {
     OpenNote,
+    OpenIterationNote,
     EditDescription,
     OpenTmux,
     SetActive,
@@ -110,6 +112,7 @@ pub enum ActionMenuItem {
 impl ActionMenuItem {
     pub const ALL: &[Self] = &[
         Self::OpenNote,
+        Self::OpenIterationNote,
         Self::CreateGitWorktree,
         Self::OpenTmux,
         Self::EditDescription,
@@ -124,6 +127,7 @@ impl ActionMenuItem {
     pub fn label(self) -> &'static str {
         match self {
             Self::OpenNote => "Open Note",
+            Self::OpenIterationNote => "Open Iteration Note",
             Self::EditDescription => "Edit Description",
             Self::OpenTmux => "Open Tmux Session",
             Self::SetActive => "Toggle Active Story",
@@ -173,6 +177,29 @@ pub fn update(
 
         ActionMenuMsg::Accept => {
             let mut actions = match ActionMenuItem::from_idx(state.selected.unwrap_or(0)) {
+                ActionMenuItem::OpenIterationNote => {
+                    let iteration = data_state
+                        .current_iterations_ref()
+                        .and_then(|iterations| {
+                            get_story_associated_iteration(story.iteration_id, iterations)
+                        });
+
+                    match iteration {
+                        Some(it) => vec![Cmd::OpenIterationNote {
+                            iteration_id: it.id,
+                            iteration_name: it.name.clone(),
+                            iteration_app_url: it.app_url.clone(),
+                        }],
+                        None => {
+                            ui_state.errors.push(ErrorInfo::new(
+                                "No iteration",
+                                "This story has no associated iteration",
+                            ));
+                            vec![Cmd::None]
+                        }
+                    }
+                }
+
                 ActionMenuItem::OpenNote => {
                     let iteration_app_url = data_state
                         .current_iterations_ref()
