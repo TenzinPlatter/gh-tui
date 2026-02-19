@@ -7,7 +7,7 @@ use crossterm::terminal::{
     EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
 };
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
-use ratatui::widgets::{Block, Clear, Paragraph, StatefulWidget, WidgetRef};
+use ratatui::widgets::{Block, Clear, Paragraph, StatefulWidget, WidgetRef, Widget};
 use ratatui::{DefaultTerminal, Frame};
 use tempfile::NamedTempFile;
 use tokio::sync::mpsc;
@@ -231,21 +231,15 @@ impl App {
                 story_list_view.render_ref(chunks[1], frame.buffer_mut());
             }
 
-            ViewType::Iterations => {
-                // let iteration_view = IterationListView::new();
-                let placeholder = Paragraph::new("Coming soon...").block(Block::bordered());
-                frame.render_widget(placeholder, chunks[1]);
-            }
-
             ViewType::Notes => {
                 let notes_view = NotesListView::new(&self.model.ui.notes_list);
                 notes_view.render_ref(chunks[1], frame.buffer_mut());
             }
 
-            ViewType::Epics | ViewType::Search => {
+            ViewType::Epics | ViewType::Search | ViewType::Iterations => {
                 // Placeholder for future views
                 let placeholder = Paragraph::new("Coming soon...").block(Block::bordered());
-                frame.render_widget(placeholder, chunks[1]);
+                placeholder.render(chunks[1], frame.buffer_mut());
             }
         }
 

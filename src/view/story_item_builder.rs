@@ -104,7 +104,7 @@ impl StoryItemWidget<'_> {
 
         // Story name (apply bold if selected)
         let name_style = if self.is_selected {
-            base_style.add_modifier(Modifier::BOLD)
+            base_style.reversed()
         } else {
             base_style
         };
