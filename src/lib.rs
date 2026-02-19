@@ -20,6 +20,7 @@ use crate::{
 
 pub mod api;
 pub mod app;
+pub mod keybindings;
 pub mod cache;
 pub mod cli;
 pub mod config;

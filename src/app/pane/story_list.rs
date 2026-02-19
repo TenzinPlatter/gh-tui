@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crossterm::event::{KeyCode, KeyEvent};
+use crossterm::event::KeyEvent;
 
 use crate::{
     api::{
@@ -8,7 +8,8 @@ use crate::{
         story::{Story, get_story_associated_iteration},
     },
     app::{cmd::Cmd, msg::StoryListMsg},
-    dbg_file, navkey,
+    dbg_file,
+    keybindings::Key,
 };
 
 pub use crate::app::model::StoryListState;
@@ -252,18 +253,15 @@ fn get_hovered_story(state: &StoryListState, stories: &[Story]) -> Option<Story>
 }
 
 pub fn key_to_msg(key: KeyEvent) -> Option<StoryListMsg> {
-    match key.code {
-        navkey!(down) => Some(StoryListMsg::FocusNext),
-        navkey!(up) => Some(StoryListMsg::FocusPrev),
-        KeyCode::Char('f') => Some(StoryListMsg::ToggleFinished),
-
-        // story specific shortcuts
-        KeyCode::Char('o') => Some(StoryListMsg::OpenInBrowser),
-        KeyCode::Char('n') => Some(StoryListMsg::OpenNote),
-        KeyCode::Char('a') => Some(StoryListMsg::SelectStory),
-        KeyCode::Char('e') => Some(StoryListMsg::EditStoryContents),
-        KeyCode::Char('t') => Some(StoryListMsg::TmuxEnter),
-
+    match Key::from_key_event(key)? {
+        Key::FocusNext => Some(StoryListMsg::FocusNext),
+        Key::FocusPrev => Some(StoryListMsg::FocusPrev),
+        Key::ToggleFinished => Some(StoryListMsg::ToggleFinished),
+        Key::OpenBrowser => Some(StoryListMsg::OpenInBrowser),
+        Key::OpenNote => Some(StoryListMsg::OpenNote),
+        Key::SelectStory => Some(StoryListMsg::SelectStory),
+        Key::EditDescription => Some(StoryListMsg::EditStoryContents),
+        Key::Tmux => Some(StoryListMsg::TmuxEnter),
         _ => None,
     }
 }

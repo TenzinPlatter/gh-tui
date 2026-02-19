@@ -1,8 +1,9 @@
 use std::path::PathBuf;
 
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use crossterm::event::{KeyCode, KeyEvent};
 
 use crate::{
+    api::story::get_story_associated_iteration,
     app::{
         App,
         cmd::Cmd,
@@ -12,6 +13,7 @@ use crate::{
     },
     dbg_file,
     error::ErrorInfo,
+    keybindings::Key,
 };
 
 impl App {
@@ -245,54 +247,94 @@ impl App {
             };
         }
 
-        if should_quit(&key) {
-            return self.update(Msg::Quit);
-        }
+        let app_key = Key::from_key_event(key);
 
-        match key.code {
-            // View switching (Tab/Shift+Tab)
-            KeyCode::Tab | KeyCode::Char('L') => {
-                let next_view = self.model.ui.active_view.next();
-                return self.update(Msg::SwitchToView(next_view));
+        // Global keys
+        if let Some(app_key) = app_key {
+            match app_key {
+                Key::Quit => return self.update(Msg::Quit),
+                Key::ViewNext => {
+                    let next = self.model.ui.active_view.next();
+                    return self.update(Msg::SwitchToView(next));
+                }
+                Key::ViewPrev => {
+                    let prev = self.model.ui.active_view.prev();
+                    return self.update(Msg::SwitchToView(prev));
+                }
+                Key::DailyNote => {
+                    let today = crate::time::today();
+                    let path = PathBuf::from(format!(
+                        "{}/daily-{}.md",
+                        self.config.notes_dir.display(),
+                        today
+                    ));
+                    return vec![Cmd::OpenDailyNote { path }];
+                }
+                _ => {}
             }
-
-            KeyCode::BackTab | KeyCode::Char('H') => {
-                let prev_view = self.model.ui.active_view.prev();
-                return self.update(Msg::SwitchToView(prev_view));
-            }
-
-            KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                let today = crate::time::today();
-                let path = PathBuf::from(format!(
-                    "{}/daily-{}.md",
-                    self.config.notes_dir.display(),
-                    today
-                ));
-                return vec![Cmd::OpenDailyNote { path }];
-            }
-
-            _ => {}
         }
 
         // Route to active view's key handler
         match self.model.ui.active_view {
             ViewType::Stories => {
-                match key.code {
-                    KeyCode::Enter => return self.update(Msg::ToggleActionMenu),
-                    KeyCode::Char('d') => {
-                        let story = self
-                            .model
-                            .ui
-                            .story_list
-                            .selected_story_id
-                            .and_then(|id| self.model.data.stories.iter().find(|s| s.id == id));
+                if key.code == KeyCode::Enter {
+                    return self.update(Msg::ToggleActionMenu);
+                }
 
-                        if let Some(story) = story {
-                            description_modal::open(&mut self.model.ui.description_modal, story.clone());
+                if let Some(app_key) = app_key {
+                    match app_key {
+                        Key::Description => {
+                            let story = self
+                                .model
+                                .ui
+                                .story_list
+                                .selected_story_id
+                                .and_then(|id| self.model.data.stories.iter().find(|s| s.id == id));
+
+                            if let Some(story) = story {
+                                description_modal::open(
+                                    &mut self.model.ui.description_modal,
+                                    story.clone(),
+                                );
+                            }
+                            return vec![Cmd::None];
                         }
-                        return vec![Cmd::None];
+                        Key::IterationNote => {
+                            let story = self
+                                .model
+                                .ui
+                                .story_list
+                                .selected_story_id
+                                .and_then(|id| self.model.data.stories.iter().find(|s| s.id == id));
+
+                            if let Some(story) = story {
+                                let iteration = self
+                                    .model
+                                    .data
+                                    .current_iterations_ref()
+                                    .and_then(|its| {
+                                        get_story_associated_iteration(story.iteration_id, its)
+                                    });
+
+                                return match iteration {
+                                    Some(it) => vec![Cmd::OpenIterationNote {
+                                        iteration_id: it.id,
+                                        iteration_name: it.name.clone(),
+                                        iteration_app_url: it.app_url.clone(),
+                                    }],
+                                    None => {
+                                        self.model.ui.errors.push(ErrorInfo::new(
+                                            "No iteration",
+                                            "This story has no associated iteration",
+                                        ));
+                                        vec![Cmd::None]
+                                    }
+                                };
+                            }
+                            return vec![Cmd::None];
+                        }
+                        _ => {}
                     }
-                    _ => {}
                 }
 
                 if let Some(msg) = story_list::key_to_msg(key) {
@@ -309,9 +351,4 @@ impl App {
 
         vec![Cmd::None]
     }
-}
-
-fn should_quit(key: &KeyEvent) -> bool {
-    matches!(key.code, KeyCode::Char('q'))
-        || (matches!(key.code, KeyCode::Char('c')) && key.modifiers.contains(KeyModifiers::CONTROL))
 }
