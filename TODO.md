@@ -6,8 +6,9 @@
 - [ ] Ask task queue with notifications for async tasks like api fetching etc. should be able to display multiple tasks at once
 - [ ] Some task is still blocking on close sometimes, maybe story fetching idk, need to investigate
 - [ ] Move description modal toggle into StoryListMsg
-- [ ] Daily note? Or just a general todo note
+- [ ] Sometimes tab don't work, maybe when async tasks are processing stories/iterations, move this to tasks
 
+- [x] Daily note? Or just a general todo note
 - [x] Make api fetching quit automatically if closing tui before they are finished
 - [x] Make fzf for git worktree cancellable without crashing
 - [x] notes system

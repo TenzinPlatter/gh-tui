@@ -63,11 +63,11 @@ fn display_name(path: &Path, is_daily: bool) -> String {
 
 impl<'a> WidgetRef for NotesListView<'a> {
     fn render_ref(&self, area: Rect, buf: &mut Buffer) {
-        let block = Block::bordered().border_set(border::THICK);
-        let inner = block.inner(area);
-        block.render(area, buf);
-
         if self.state.daily_notes.is_empty() && self.state.other_notes.is_empty() {
+            let block = Block::bordered().border_set(border::THICK);
+            let inner = block.inner(area);
+            block.render(area, buf);
+
             let message = "No notes found.";
             let style = Style::default().gray();
             let paragraph = Paragraph::new(message)
@@ -82,32 +82,28 @@ impl<'a> WidgetRef for NotesListView<'a> {
             return;
         }
 
-        let mut constraints = Vec::new();
         let sections: Vec<(&str, &[PathBuf], bool)> = vec![
             ("Daily Notes", &self.state.daily_notes, true),
             ("Iteration Notes", &self.state.other_notes, false),
         ];
 
+        let mut constraints = Vec::new();
         for (_, notes, _) in &sections {
             if notes.is_empty() {
                 continue;
             }
-            // Header: 2 lines (title + divider)
-            constraints.push(Constraint::Length(2));
-            // Notes: 2 lines each (name + divider)
-            constraints.push(Constraint::Length((notes.len() * 2) as u16));
-            // Spacing between sections
+            constraints.push(Constraint::Length(1));
+            // notes * 2 lines + 2 for border
+            constraints.push(Constraint::Length((notes.len() * 2 + 2) as u16));
             constraints.push(Constraint::Length(1));
         }
 
-        // Remove trailing spacing
         if !constraints.is_empty() {
             constraints.pop();
         }
-        // Filler
         constraints.push(Constraint::Min(0));
 
-        let section_areas = Layout::vertical(constraints).split(inner);
+        let section_areas = Layout::vertical(constraints).split(area);
 
         let mut area_index = 0;
         for (title, notes, is_daily) in &sections {
@@ -115,31 +111,22 @@ impl<'a> WidgetRef for NotesListView<'a> {
                 continue;
             }
 
-            // Render header
+            // Render section header
             let header_area = section_areas[area_index];
             area_index += 1;
 
-            let header_style = Style::default().cyan().bold();
+            let header_style = Style::default().dark_gray();
+            let display = format!(" ── {} ──", title);
+            let title_line = Line::from(display).style(header_style);
+            buf.set_line(header_area.x, header_area.y, &title_line, header_area.width);
 
-            if header_area.height > 0 {
-                let title_line = Line::from(*title).style(header_style);
-                buf.set_line(header_area.x, header_area.y, &title_line, header_area.width);
-            }
-
-            if header_area.height > 1 {
-                let divider = "═".repeat(header_area.width as usize);
-                let divider_line = Line::from(divider).style(header_style);
-                buf.set_line(
-                    header_area.x,
-                    header_area.y + 1,
-                    &divider_line,
-                    header_area.width,
-                );
-            }
-
-            // Render note items
-            let items_area = section_areas[area_index];
+            // Render bordered note items
+            let list_area = section_areas[area_index];
             area_index += 1;
+
+            let list_block = Block::bordered().border_set(border::THICK);
+            let items_area = list_block.inner(list_area);
+            list_block.render(list_area, buf);
 
             let mut y = items_area.y;
             for note_path in *notes {
@@ -150,7 +137,6 @@ impl<'a> WidgetRef for NotesListView<'a> {
                 let is_selected = self.state.selected_path.as_ref() == Some(note_path);
                 let name = display_name(note_path, *is_daily);
 
-                // Name line
                 let name_style = if is_selected {
                     Style::default().bold()
                 } else {
@@ -160,7 +146,6 @@ impl<'a> WidgetRef for NotesListView<'a> {
                 buf.set_line(items_area.x, y, &name_line, items_area.width);
                 y += 1;
 
-                // Divider line
                 if y < items_area.y + items_area.height {
                     let divider_style = if is_selected {
                         Style::default().yellow()

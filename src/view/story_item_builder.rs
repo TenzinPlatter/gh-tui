@@ -13,7 +13,6 @@ pub struct StoryItemWidget<'a> {
     story: &'a Story,
     is_active: bool,
     is_selected: bool,
-    next_is_selected: bool,
     _width: u16,
     is_completed: bool,
 }
@@ -23,7 +22,6 @@ impl<'a> StoryItemWidget<'a> {
         story: &'a Story,
         is_active: bool,
         is_selected: bool,
-        next_is_selected: bool,
         width: u16,
         is_completed: bool,
     ) -> Self {
@@ -31,7 +29,6 @@ impl<'a> StoryItemWidget<'a> {
             story,
             is_active,
             is_selected,
-            next_is_selected,
             _width: width,
             is_completed,
         }
@@ -55,13 +52,12 @@ impl Widget for StoryItemWidget<'_> {
         buf.set_line(area.x, area.y, &content, area.width);
 
         // Render divider on second line
-        // Use yellow if this story is selected OR if the next story is selected
-        let divider_style = if self.is_selected || self.next_is_selected {
+        let divider_style = if self.is_selected {
             Style::default().fg(Color::Yellow)
         } else if self.is_completed {
             Style::default().gray()
         } else {
-            Style::default()
+            Style::default().dark_gray()
         };
         let divider = Line::from("─".repeat(area.width as usize)).style(divider_style);
         buf.set_line(area.x, area.y + 1, &divider, area.width);
@@ -104,7 +100,7 @@ impl StoryItemWidget<'_> {
 
         // Story name (apply bold if selected)
         let name_style = if self.is_selected {
-            base_style.reversed()
+            base_style.bold()
         } else {
             base_style
         };

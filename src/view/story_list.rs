@@ -112,13 +112,12 @@ impl<'a> StoryListView<'a> {
 
 impl<'a> WidgetRef for StoryListView<'a> {
     fn render_ref(&self, area: Rect, buf: &mut Buffer) {
-        // Create the border block
-        let block = Block::bordered().border_set(border::THICK);
-        let inner = block.inner(area);
-        block.render(area, buf);
-
-        // Handle loading and empty states
+        // Handle loading and empty states with a single bordered block
         if self.stories.is_empty() {
+            let block = Block::bordered().border_set(border::THICK);
+            let inner = block.inner(area);
+            block.render(area, buf);
+
             let message = if self.loading.is_loading() {
                 format!("{} {}", self.spinner_char(), self.loading.label())
             } else {
@@ -140,31 +139,25 @@ impl<'a> WidgetRef for StoryListView<'a> {
         // Group stories by iteration
         let sections = group_stories_by_iteration(self.stories, self.iterations, self.state.show_finished);
 
-        // Calculate layout constraints for sections
+        // Calculate layout constraints for sections:
+        // header (1) + bordered list (items*2 + 2 for border) + spacing (1)
         let mut constraints = Vec::new();
         for section in &sections {
-            // Header: 2 lines (title + divider)
-            constraints.push(Constraint::Length(2));
-            // Stories: 2 lines each
-            constraints.push(Constraint::Length((section.stories.len() * 2) as u16));
-            // Spacing: 1 line between sections
+            constraints.push(Constraint::Length(1));
+            constraints.push(Constraint::Length((section.stories.len() * 2 + 2) as u16));
             constraints.push(Constraint::Length(1));
         }
 
-        // If we have constraints, remove the last spacing constraint
         if !constraints.is_empty() {
             constraints.pop();
         }
-
-        // Add a filler constraint to take up remaining space
         constraints.push(Constraint::Min(0));
 
-        let section_areas = Layout::vertical(constraints).split(inner);
+        let section_areas = Layout::vertical(constraints).split(area);
 
-        // Render each section
         let mut area_index = 0;
         for section in &sections {
-            // Render header
+            // Render section header
             let header_area = section_areas[area_index];
             area_index += 1;
 
@@ -174,39 +167,22 @@ impl<'a> WidgetRef for StoryListView<'a> {
                 "No Iteration".to_string()
             };
 
-            let header_style = if section.iteration.is_some() {
-                Style::default().cyan().bold()
-            } else {
-                Style::default().gray().bold()
-            };
+            let header_style = Style::default().dark_gray();
+            let display = format!(" ── {} ──", header_text);
+            let title_line = Line::from(display).style(header_style);
+            buf.set_line(header_area.x, header_area.y, &title_line, header_area.width);
 
-            // Render title line
-            if header_area.height > 0 {
-                let title_line = Line::from(header_text).style(header_style);
-                buf.set_line(header_area.x, header_area.y, &title_line, header_area.width);
-            }
-
-            // Render divider line
-            if header_area.height > 1 {
-                let divider = "═".repeat(header_area.width as usize);
-                let divider_line = Line::from(divider).style(header_style);
-                buf.set_line(
-                    header_area.x,
-                    header_area.y + 1,
-                    &divider_line,
-                    header_area.width,
-                );
-            }
-
-            // Render stories list
-            let stories_area = section_areas[area_index];
+            // Render bordered stories list
+            let list_area = section_areas[area_index];
             area_index += 1;
 
-            // Build a list of stories for this section
+            let list_block = Block::bordered().border_set(border::THICK);
+            let stories_area = list_block.inner(list_area);
+            list_block.render(list_area, buf);
+
             let section_stories: Vec<_> = section.stories.to_vec();
             let active_story = self.active_story;
             let width = stories_area.width;
-            let selected_story_id = self.state.selected_story_id;
 
             let builder = ListBuilder::new(move |context| {
                 let story = section_stories[context.index];
@@ -216,19 +192,10 @@ impl<'a> WidgetRef for StoryListView<'a> {
                 };
                 let is_completed = story.completed;
 
-                // Check if the next story is selected
-                let next_is_selected = if context.index + 1 < section_stories.len() {
-                    let next_story = section_stories[context.index + 1];
-                    Some(next_story.id) == selected_story_id
-                } else {
-                    false
-                };
-
                 let widget = StoryItemWidget::new(
                     story,
                     is_active,
                     context.is_selected,
-                    next_is_selected,
                     width,
                     is_completed,
                 );
@@ -239,7 +206,6 @@ impl<'a> WidgetRef for StoryListView<'a> {
 
             let list = ListView::new(builder, section.stories.len());
 
-            // Find if any story in this section is selected
             let mut list_state = ListState::default();
             if let Some(selected_id) = self.state.selected_story_id
                 && let Some(pos) = section.stories.iter().position(|s| s.id == selected_id)
