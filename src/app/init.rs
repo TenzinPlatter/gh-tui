@@ -19,7 +19,7 @@ use crate::{
 impl App {
     pub async fn init() -> Result<Self> {
         let config = Config::read()?;
-        let mut cache = Cache::read(config.cache_dir.clone());
+        let mut cache = Cache::read(config.cache_dir.clone()).await;
 
         if dummy::is_enabled() {
             return Self::init_with_dummy_data(config, cache).await;

@@ -1,12 +1,10 @@
 use std::{
     env,
-    fs::{self, File, remove_file},
-    io::{Read, Write},
     path::{Path, PathBuf},
 };
 
 use serde::{Deserialize, Serialize};
-use tokio::task::spawn_blocking;
+use tokio::{fs::{self, File, remove_file}, io::{AsyncReadExt, AsyncWriteExt}};
 use uuid::Uuid;
 
 use crate::{
@@ -56,14 +54,14 @@ impl Cache {
         cache_dir
     }
 
-    pub fn read(cache_dir: PathBuf) -> Self {
+    pub async fn read(cache_dir: PathBuf) -> Self {
         dbg_file!("Using {} as cache_dir", cache_dir.display());
 
         let cache_file = Self::get_cache_file(cache_dir);
 
         if let Some(parent) = cache_file.parent()
             && !parent.exists()
-            && let Err(e) = fs::create_dir_all(parent)
+            && let Err(e) = fs::create_dir_all(parent).await
         {
             dbg_file!(
                 "Failed to create cache dir parent at: {} with err: {}",
@@ -74,7 +72,7 @@ impl Cache {
             return Self::default();
         }
 
-        let contents = match read_file(&cache_file) {
+        let contents = match read_file(&cache_file).await {
             Ok(contents) => contents,
             Err(_) => {
                 return Self::default();
@@ -86,7 +84,7 @@ impl Cache {
             Err(_) => {
                 let cache_file = Path::new(&cache_file);
                 if cache_file.is_file() {
-                    let _ = remove_file(cache_file);
+                    let _ = remove_file(cache_file).await;
                 }
                 Self::default()
             }
@@ -94,18 +92,18 @@ impl Cache {
     }
 
     pub async fn write(&self) -> anyhow::Result<()> {
-        use tokio::{fs::File, io::AsyncWriteExt};
         let cache_file = Self::get_cache_file(self.cache_dir.clone());
         let mut f = File::create(cache_file).await?;
-        f.write_all(&serde_json::to_string(self)?.into_bytes()).await?;
+        f.write_all(&serde_json::to_string(self)?.into_bytes())
+            .await?;
 
         Ok(())
     }
 }
 
-fn read_file(file: &PathBuf) -> anyhow::Result<String> {
-    let mut f = File::open(file)?;
+async fn read_file(file: &PathBuf) -> anyhow::Result<String> {
+    let mut f = File::open(file).await?;
     let mut buf = String::new();
-    f.read_to_string(&mut buf)?;
+    f.read_to_string(&mut buf).await?;
     Ok(buf)
 }
