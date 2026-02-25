@@ -43,12 +43,9 @@ pub struct App {
 impl App {
     pub async fn main_loop(&mut self, terminal: &mut DefaultTerminal) -> Result<()> {
         while !self.exit {
-            let start = Instant::now();
             terminal.draw(|frame| self.draw(frame))?;
 
-            let mut x = None;
             if let Some(msg) = self.poll_for_message().await? {
-                x = Some(msg.clone());
                 let commands = self.update(msg);
 
                 for cmd in commands {
@@ -74,12 +71,6 @@ impl App {
                     }
                 }
             }
-
-            let elapsed = start.elapsed();
-            if elapsed.as_millis() > 16 {
-                dbg_file!("Slow frame: {:?}ms, msg: {:?}", elapsed.as_millis(), x);
-            }
-
         }
 
         Ok(())

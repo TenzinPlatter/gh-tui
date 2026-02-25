@@ -1,4 +1,4 @@
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::{
@@ -125,10 +125,8 @@ pub async fn execute(
                         sender.send(Msg::EpicsLoaded(epics)).ok();
                     }
                     Err(e) => {
-                        let info = ErrorInfo::new(
-                            "Failed to fetch epics".to_string(),
-                            e.to_string(),
-                        );
+                        let info =
+                            ErrorInfo::new("Failed to fetch epics".to_string(), e.to_string());
                         sender.send(Msg::Error(info)).ok();
                     }
                 }
@@ -235,6 +233,21 @@ pub fn open_note_in_editor(
         story_app_url,
         iteration_app_url,
     );
+
+    if let Some(p) = note.path.parent() {
+        create_dir_all(p)?;
+    }
+
+    let needs_frontmatter = if note.path.is_file() {
+        read_to_string(&note.path)?.is_empty()
+    } else {
+        true
+    };
+
+    if needs_frontmatter {
+        let frontmatter_string = format!("---\n{}---", note.frontmatter.to_yaml_string()?);
+        std::fs::write(&note.path, frontmatter_string)?;
+    }
 
     open_in_editor(config, &note.path)?;
 
@@ -365,7 +378,10 @@ pub fn open_scratch_note_in_editor(name: &str, path: &Path, config: &Config) -> 
 
     if needs_frontmatter {
         let today = crate::time::today();
-        let frontmatter = format!("---\nname: {}\ncreated: {}\ntype: scratch\n---\n", name, today);
+        let frontmatter = format!(
+            "---\nname: {}\ncreated: {}\ntype: scratch\n---\n",
+            name, today
+        );
         let mut f = File::create(path)?;
         f.write_all(frontmatter.as_bytes())?;
     }
