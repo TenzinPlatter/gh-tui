@@ -12,13 +12,13 @@ use tokio::sync::mpsc::UnboundedSender;
 
 use crate::app::model::Model;
 use crate::error::ErrorInfo;
-use crate::tmux::{session_attach, session_create, session_exists};
 use crate::{
     api::{ApiClient, story::Story},
     app::msg::Msg,
-    config::Config,
+    config::{Config, Mux},
     dbg_file,
     note::Note,
+    zellij, tmux,
 };
 
 #[derive(Debug, Clone)]
@@ -159,12 +159,6 @@ pub async fn execute(
             Ok(())
         }
 
-        Cmd::OpenTmuxSession { story_name } => {
-            let session_name = Story::tmux_session_name(&story_name);
-            open_tmux_session(&session_name).await?;
-            Ok(())
-        }
-
         Cmd::ActionMenuVisibility(enabled) => {
             model.ui.action_menu.is_showing = enabled;
             if enabled {
@@ -189,7 +183,8 @@ pub async fn execute(
         | Cmd::EditStoryContent { .. }
         | Cmd::CreateGitWorktree { .. }
         | Cmd::OpenDailyNote { .. }
-        | Cmd::OpenScratchNote { .. } => {
+        | Cmd::OpenScratchNote { .. }
+        | Cmd::OpenTmuxSession { .. } => {
             unreachable!("TUI-suspending commands should be handled in main_loop")
         }
     }
@@ -389,10 +384,69 @@ pub fn open_scratch_note_in_editor(name: &str, path: &Path, config: &Config) -> 
     open_in_editor(config, path)
 }
 
-pub async fn open_tmux_session(name: &str) -> anyhow::Result<()> {
-    if !session_exists(name).await? {
-        session_create(name).await?;
+pub async fn open_mux_session(name: &str, mux: &Mux) -> anyhow::Result<()> {
+    match mux {
+        Mux::Tmux => {
+            if !tmux::session_exists(name).await? {
+                tmux::session_create(name).await?;
+            }
+            tmux::session_attach(name).await?;
+        }
+        Mux::Zellij => {
+            if !zellij::session_exists(name).await? {
+                zellij::session_create(name).await?;
+            }
+            zellij::session_attach(name).await?;
+        }
     }
-    session_attach(name).await?;
+    Ok(())
+}
+
+pub fn open_mux_session_sync(name: &str, mux: &Mux) -> anyhow::Result<()> {
+    use std::process::Command;
+
+    match mux {
+        Mux::Tmux => {
+            let out = Command::new("tmux")
+                .args(["list-sessions", "-F", "#{session_name}"])
+                .output()?;
+            let exists = String::from_utf8_lossy(&out.stdout)
+                .lines()
+                .any(|l| l.trim() == name);
+
+            if !exists {
+                Command::new("tmux")
+                    .args(["new-session", "-d", "-s", name])
+                    .status()?;
+            }
+
+            let cmd = if tmux::attatched_to_session() {
+                "switch-client"
+            } else {
+                "attach-session"
+            };
+            Command::new("tmux").args([cmd, "-t", name]).status()?;
+        }
+        Mux::Zellij => {
+            let out = Command::new("zellij").arg("list-sessions").output();
+            let exists = match out {
+                Ok(out) if out.status.success() => {
+                    let stdout = String::from_utf8_lossy(&out.stdout);
+                    stdout
+                        .lines()
+                        .any(|l| l.split_whitespace().next() == Some(name))
+                }
+                _ => false,
+            };
+
+            if !exists {
+                Command::new("zellij")
+                    .args(["attach", "--create-background", name])
+                    .status()?;
+            }
+
+            Command::new("zellij").args(["attach", name]).status()?;
+        }
+    }
     Ok(())
 }

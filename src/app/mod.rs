@@ -22,7 +22,7 @@ use crate::view::keybinds_panel::KeybindsPanel;
 use crate::view::{EpicListView, IterationListView};
 use crate::view::{navbar::NavBar, notes_list::NotesListView, story_list::StoryListView};
 use crate::worktree::{create_worktree, get_repo_list, select_repo_with_fzf};
-use crate::{api::ApiClient, app::model::ViewType, config::Config};
+use crate::{api::{ApiClient, story::Story}, app::model::ViewType, config::Config};
 
 pub mod cmd;
 pub mod init;
@@ -56,7 +56,8 @@ impl App {
                         | cmd::Cmd::EditStoryContent { .. }
                         | cmd::Cmd::CreateGitWorktree { .. }
                         | cmd::Cmd::OpenDailyNote { .. }
-                        | cmd::Cmd::OpenScratchNote { .. } => {
+                        | cmd::Cmd::OpenScratchNote { .. }
+                        | cmd::Cmd::OpenTmuxSession { .. } => {
                             self.handle_suspended_cmd(cmd, terminal).await?;
                         }
                         _ => {
@@ -186,6 +187,14 @@ impl App {
                     cmd::open_scratch_note_in_editor(&name, &path, &self.model.config)
                 })?;
                 self.sender.send(msg::Msg::NoteOpened).ok();
+            }
+
+            cmd::Cmd::OpenTmuxSession { story_name } => {
+                let session_name = Story::tmux_session_name(&story_name);
+                let mux = self.model.config.mux.clone();
+                with_suspended_tui(terminal, || {
+                    cmd::open_mux_session_sync(&session_name, &mux)
+                })?;
             }
 
             _ => unreachable!("Non-suspending command passed to handle_suspended_cmd"),

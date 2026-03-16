@@ -11,7 +11,7 @@ use crate::{
     },
     app::{
         App,
-        cmd::{open_note_in_editor, open_tmux_session},
+        cmd::{open_mux_session, open_note_in_editor},
     },
     cache::Cache,
     cli::Commands,
@@ -34,6 +34,7 @@ pub mod text_utils;
 pub mod time;
 pub mod tmux;
 pub mod view;
+pub mod zellij;
 pub mod worktree;
 #[macro_use]
 pub mod keys;
@@ -94,7 +95,7 @@ pub async fn handle_command(
         Commands::Tmux => {
             if let Some(story) = &cache.active_story {
                 let session_name = Story::tmux_session_name(&story.name);
-                open_tmux_session(&session_name).await?;
+                open_mux_session(&session_name, &config.mux).await?;
                 Ok(())
             } else {
                 no_active_story!();

@@ -54,6 +54,8 @@ pub enum ActionMenuMsg {
 pub enum NotesListMsg {
     FocusNext,
     FocusPrev,
+    FocusSectionNext,
+    FocusSectionPrev,
     OpenNote,
 }
 

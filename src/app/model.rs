@@ -2,7 +2,7 @@ use throbber_widgets_tui::ThrobberState;
 use tokio::task::JoinHandle;
 use tui_scrollview::ScrollViewState;
 
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
 
 use crate::{
     api::{epic::EpicSlim, iteration::Iteration, story::Story},
@@ -163,6 +163,8 @@ pub struct NotesListState {
     pub iteration_notes: Vec<PathBuf>,
     pub epic_notes: Vec<PathBuf>,
     pub scratch_notes: Vec<PathBuf>,
+    /// Saved selection per section (keyed by section index 0–4).
+    pub section_selections: HashMap<usize, PathBuf>,
 }
 
 #[derive(Clone, Debug, Default)]

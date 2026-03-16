@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use crossterm::event::{KeyCode, KeyEvent};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
 use crate::{
     app::{cmd::Cmd, msg::NotesListMsg},
@@ -50,6 +50,26 @@ pub fn scan_notes(
     let epics = scan_subdir(notes_dir, "epics");
     let scratch = scan_subdir(notes_dir, "scratch");
     (daily, stories, iterations, epics, scratch)
+}
+
+/// Fixed section order: 0=daily, 1=story, 2=iteration, 3=epic, 4=scratch.
+fn section_notes(state: &NotesListState) -> [&Vec<PathBuf>; 5] {
+    [
+        &state.daily_notes,
+        &state.story_notes,
+        &state.iteration_notes,
+        &state.epic_notes,
+        &state.scratch_notes,
+    ]
+}
+
+/// Returns the section index (0–4) that the given path belongs to.
+fn section_of(state: &NotesListState, path: &PathBuf) -> Option<usize> {
+    section_notes(state)
+        .iter()
+        .enumerate()
+        .find(|(_, notes)| notes.contains(path))
+        .map(|(i, _)| i)
 }
 
 /// Returns a flat list of all notes in display order.
@@ -107,6 +127,46 @@ pub fn update(state: &mut NotesListState, msg: NotesListMsg) -> Vec<Cmd> {
             vec![Cmd::None]
         }
 
+        NotesListMsg::FocusSectionNext | NotesListMsg::FocusSectionPrev => {
+            let sections = section_notes(state);
+            let non_empty: Vec<usize> = (0..5).filter(|&i| !sections[i].is_empty()).collect();
+            if non_empty.is_empty() {
+                return vec![Cmd::None];
+            }
+
+            // Save current selection for current section
+            if let Some(ref sel) = state.selected_path.clone() {
+                if let Some(cur_idx) = section_of(state, sel) {
+                    state.section_selections.insert(cur_idx, sel.clone());
+                }
+            }
+
+            // Find current section index within non_empty list
+            let cur_section = state.selected_path.as_ref()
+                .and_then(|sel| section_of(state, sel));
+            let cur_pos = cur_section
+                .and_then(|s| non_empty.iter().position(|&i| i == s))
+                .unwrap_or(0);
+
+            let next_pos = if matches!(msg, NotesListMsg::FocusSectionNext) {
+                (cur_pos + 1) % non_empty.len()
+            } else {
+                (cur_pos + non_empty.len() - 1) % non_empty.len()
+            };
+            let target = non_empty[next_pos];
+
+            // Restore saved selection for target section, or default to first item
+            let sections = section_notes(state);
+            state.selected_path = state
+                .section_selections
+                .get(&target)
+                .filter(|p| sections[target].contains(p))
+                .cloned()
+                .or_else(|| sections[target].first().cloned());
+
+            vec![Cmd::None]
+        }
+
         NotesListMsg::OpenNote => {
             if let Some(ref path) = state.selected_path {
                 vec![Cmd::OpenDailyNote { path: path.clone() }]
@@ -121,6 +181,12 @@ pub fn key_to_msg(key: KeyEvent) -> Option<NotesListMsg> {
     match key.code {
         navkey!(down) => Some(NotesListMsg::FocusNext),
         navkey!(up) => Some(NotesListMsg::FocusPrev),
+        KeyCode::Char('j') if key.modifiers == KeyModifiers::CONTROL => {
+            Some(NotesListMsg::FocusSectionNext)
+        }
+        KeyCode::Char('k') if key.modifiers == KeyModifiers::CONTROL => {
+            Some(NotesListMsg::FocusSectionPrev)
+        }
         KeyCode::Enter => Some(NotesListMsg::OpenNote),
         _ => None,
     }

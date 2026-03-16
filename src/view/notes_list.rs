@@ -7,7 +7,7 @@ use ratatui::{
     style::Style,
     symbols::border,
     text::Line,
-    widgets::{Block, Paragraph, Widget, WidgetRef},
+    widgets::{Block, Padding, Paragraph, Widget, WidgetRef},
 };
 
 use crate::app::model::NotesListState;
@@ -87,7 +87,7 @@ impl<'a> WidgetRef for NotesListView<'a> {
             return;
         }
 
-        let sections: Vec<(&str, &[PathBuf], bool)> = vec![
+        let all_sections: Vec<(&str, &[PathBuf], bool)> = vec![
             ("Daily Notes",     &self.state.daily_notes,     true),
             ("Story Notes",     &self.state.story_notes,     false),
             ("Iteration Notes", &self.state.iteration_notes, false),
@@ -95,55 +95,55 @@ impl<'a> WidgetRef for NotesListView<'a> {
             ("Scratch Notes",   &self.state.scratch_notes,   false),
         ];
 
-        let mut constraints = Vec::new();
-        for (_, notes, _) in &sections {
-            if notes.is_empty() {
-                continue;
-            }
-            constraints.push(Constraint::Length(1));
-            // notes * 2 lines + 1 for border (no trailing divider on last item)
-            constraints.push(Constraint::Length((notes.len() * 2 + 1) as u16));
-            constraints.push(Constraint::Length(1));
-        }
+        let sections: Vec<_> = all_sections
+            .into_iter()
+            .filter(|(_, notes, _)| !notes.is_empty())
+            .collect();
 
-        if !constraints.is_empty() {
-            constraints.pop();
-        }
-        constraints.push(Constraint::Min(0));
+        let n = sections.len() as u32;
+        let outer_constraints: Vec<Constraint> = (0..n).map(|_| Constraint::Fill(1)).collect();
+        let section_chunks = Layout::vertical(outer_constraints).split(area);
 
-        let section_areas = Layout::vertical(constraints).split(area);
+        for (idx, (title, notes, is_daily)) in sections.iter().enumerate() {
+            let section_area = section_chunks[idx];
 
-        let mut area_index = 0;
-        for (title, notes, is_daily) in &sections {
-            if notes.is_empty() {
-                continue;
-            }
+            let inner_chunks = Layout::vertical([
+                Constraint::Length(1),
+                Constraint::Min(0),
+            ])
+            .split(section_area);
 
             // Render section header
-            let header_area = section_areas[area_index];
-            area_index += 1;
-
             let header_style = Style::default().dark_gray();
             let display = format!(" ── {} ──", title);
             let title_line = Line::from(display).style(header_style);
-            buf.set_line(header_area.x, header_area.y, &title_line, header_area.width);
+            buf.set_line(inner_chunks[0].x, inner_chunks[0].y, &title_line, inner_chunks[0].width);
 
             // Render bordered note items
-            let list_area = section_areas[area_index];
-            area_index += 1;
+            let list_block = Block::bordered()
+                .border_set(border::THICK)
+                .padding(Padding::vertical(1));
+            let items_area = list_block.inner(inner_chunks[1]);
+            list_block.render(inner_chunks[1], buf);
 
-            let list_block = Block::bordered().border_set(border::THICK);
-            let items_area = list_block.inner(list_area);
-            list_block.render(list_area, buf);
+            // Compute scroll offset so selected item stays visible
+            let visible_items = (items_area.height / 2) as usize;
+            let sel_idx = self.state.selected_path.as_ref()
+                .and_then(|sel| notes.iter().position(|p| p == sel));
+            let scroll = if let Some(sel) = sel_idx {
+                let max_scroll = notes.len().saturating_sub(visible_items.max(1));
+                sel.saturating_sub(visible_items.saturating_sub(1)).min(max_scroll)
+            } else {
+                0
+            };
 
             let mut y = items_area.y;
-            for (i, note_path) in notes.iter().enumerate() {
+            for note_path in notes.iter().skip(scroll) {
                 if y >= items_area.y + items_area.height {
                     break;
                 }
 
                 let is_selected = self.state.selected_path.as_ref() == Some(note_path);
-                let is_last = i == notes.len() - 1;
                 let name = display_name(note_path, *is_daily);
 
                 let name_style = if is_selected {
@@ -155,7 +155,7 @@ impl<'a> WidgetRef for NotesListView<'a> {
                 buf.set_line(items_area.x, y, &name_line, items_area.width);
                 y += 1;
 
-                if !is_last && y < items_area.y + items_area.height {
+                if y < items_area.y + items_area.height {
                     let divider_style = if is_selected {
                         Style::default().yellow()
                     } else {
@@ -167,9 +167,6 @@ impl<'a> WidgetRef for NotesListView<'a> {
                     y += 1;
                 }
             }
-
-            // Skip spacing
-            area_index += 1;
         }
     }
 }

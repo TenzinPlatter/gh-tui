@@ -129,7 +129,7 @@ impl ActionMenuItem {
             Self::OpenNote => "Open Note",
             Self::OpenIterationNote => "Open Iteration Note",
             Self::EditDescription => "Edit Description",
-            Self::OpenTmux => "Open Tmux Session",
+            Self::OpenTmux => "Open Mux Session",
             Self::SetActive => "Toggle Active Story",
             Self::CreateGitWorktree => "Create git worktree",
             Self::OpenInBrowser => "Open ticket in browser",

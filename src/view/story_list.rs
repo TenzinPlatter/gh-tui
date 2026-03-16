@@ -6,7 +6,7 @@ use ratatui::{
     style::Style,
     symbols::border,
     text::Line,
-    widgets::{Block, Paragraph, StatefulWidget, Widget, WidgetRef},
+    widgets::{Block, Padding, Paragraph, StatefulWidget, Widget, WidgetRef},
 };
 use tui_widget_list::{ListBuilder, ListState, ListView};
 
@@ -144,7 +144,7 @@ impl<'a> WidgetRef for StoryListView<'a> {
         let mut constraints = Vec::new();
         for section in &sections {
             constraints.push(Constraint::Length(1));
-            constraints.push(Constraint::Length((section.stories.len() * 2 + 1) as u16));
+            constraints.push(Constraint::Length((section.stories.len() * 2 + 4) as u16));
             constraints.push(Constraint::Length(1));
         }
 
@@ -176,7 +176,9 @@ impl<'a> WidgetRef for StoryListView<'a> {
             let list_area = section_areas[area_index];
             area_index += 1;
 
-            let list_block = Block::bordered().border_set(border::THICK);
+            let list_block = Block::bordered()
+                .border_set(border::THICK)
+                .padding(Padding::vertical(1));
             let stories_area = list_block.inner(list_area);
             list_block.render(list_area, buf);
 
@@ -191,15 +193,12 @@ impl<'a> WidgetRef for StoryListView<'a> {
                     None => false,
                 };
                 let is_completed = story.completed;
-                let is_last = context.index == section_stories.len() - 1;
-
                 let widget = StoryItemWidget::new(
                     story,
                     is_active,
                     context.is_selected,
                     width,
                     is_completed,
-                    is_last,
                 );
                 let height = widget.height();
 

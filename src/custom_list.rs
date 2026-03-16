@@ -4,7 +4,7 @@ use ratatui::{
     style::Style,
     symbols::border,
     text::Line,
-    widgets::{Block, Paragraph, Widget, WidgetRef},
+    widgets::{Block, Padding, Paragraph, Widget, WidgetRef},
 };
 
 /// Items that can appear in a `LinearList` must expose an id and a display label.
@@ -32,7 +32,9 @@ impl<'a, T: LinearListItem> LinearList<'a, T> {
 
 impl<T: LinearListItem> WidgetRef for LinearList<'_, T> {
     fn render_ref(&self, area: Rect, buf: &mut Buffer) {
-        let block = Block::bordered().border_set(border::THICK);
+        let block = Block::bordered()
+            .border_set(border::THICK)
+            .padding(Padding::vertical(1));
         let inner = block.inner(area);
         block.render(area, buf);
 
@@ -49,14 +51,12 @@ impl<T: LinearListItem> WidgetRef for LinearList<'_, T> {
         }
 
         let mut y = inner.y;
-        for (i, item) in self.items.iter().enumerate() {
+        for item in self.items.iter() {
             if y >= inner.y + inner.height {
                 break;
             }
 
             let is_selected = self.selected_id == Some(item.id());
-            let is_last = i == self.items.len() - 1;
-
             let name_style = if is_selected {
                 Style::default().bold()
             } else {
@@ -66,7 +66,7 @@ impl<T: LinearListItem> WidgetRef for LinearList<'_, T> {
             buf.set_line(inner.x, y, &name_line, inner.width);
             y += 1;
 
-            if !is_last && y < inner.y + inner.height {
+            if y < inner.y + inner.height {
                 let divider_style = if is_selected {
                     Style::default().yellow()
                 } else {

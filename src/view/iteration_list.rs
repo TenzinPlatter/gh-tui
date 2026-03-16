@@ -69,7 +69,7 @@ impl WidgetRef for IterationListView<'_> {
             .collect();
 
         // Active section height: border (2) + 2 lines per item - 1 (no divider on last item), capped at half the content area
-        let active_list_height = (1 + active_visible.len() as u16 * 2)
+        let active_list_height = (active_visible.len() as u16 * 2 + 4)
             .min(content_area.height.saturating_sub(2) / 2)
             .max(4); // minimum: border + empty message
 

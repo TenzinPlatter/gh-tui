@@ -6,6 +6,14 @@ use std::{
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum Mux {
+    #[default]
+    Tmux,
+    Zellij,
+}
+
 #[derive(Clone, Debug)]
 pub struct Config {
     pub notes_dir: PathBuf,
@@ -13,6 +21,7 @@ pub struct Config {
     pub api_token: String,
     pub editor: String,
     pub repositories_directory: PathBuf,
+    pub mux: Mux,
 }
 
 #[derive(Deserialize, Serialize, Clone)]
@@ -25,6 +34,8 @@ struct ConfigFile {
     editor: String,
     #[serde(default = "default_repositories_directory")]
     repositories_directory: String,
+    #[serde(default)]
+    mux: Mux,
 }
 
 impl Default for ConfigFile {
@@ -35,6 +46,7 @@ impl Default for ConfigFile {
             api_token: String::new(),
             editor: default_editor(),
             repositories_directory: default_repositories_directory(),
+            mux: Mux::default(),
         }
     }
 }
@@ -75,6 +87,7 @@ impl Config {
             api_token: config.api_token,
             editor: config.editor,
             repositories_directory,
+            mux: config.mux,
         })
     }
 
@@ -85,6 +98,7 @@ impl Config {
             api_token: self.api_token.clone(),
             editor: self.editor.clone(),
             repositories_directory: self.repositories_directory.to_str().unwrap().to_string(),
+            mux: self.mux.clone(),
         };
 
         confy::store("shortcut-notes", Some("config"), config).context("Failed to write config")
