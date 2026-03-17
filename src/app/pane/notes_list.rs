@@ -179,14 +179,14 @@ pub fn update(state: &mut NotesListState, msg: NotesListMsg) -> Vec<Cmd> {
 
 pub fn key_to_msg(key: KeyEvent) -> Option<NotesListMsg> {
     match key.code {
-        navkey!(down) => Some(NotesListMsg::FocusNext),
-        navkey!(up) => Some(NotesListMsg::FocusPrev),
         KeyCode::Char('j') if key.modifiers == KeyModifiers::CONTROL => {
             Some(NotesListMsg::FocusSectionNext)
         }
         KeyCode::Char('k') if key.modifiers == KeyModifiers::CONTROL => {
             Some(NotesListMsg::FocusSectionPrev)
         }
+        navkey!(down) => Some(NotesListMsg::FocusNext),
+        navkey!(up) => Some(NotesListMsg::FocusPrev),
         KeyCode::Enter => Some(NotesListMsg::OpenNote),
         _ => None,
     }
