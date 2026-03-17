@@ -68,6 +68,7 @@ pub enum Cmd {
         path: PathBuf,
         name: String,
     },
+    WriteTodos,
 }
 
 pub async fn execute(
@@ -169,6 +170,11 @@ pub async fn execute(
                 model.ui.action_menu.target_story_id = None;
             }
 
+            Ok(())
+        }
+
+        Cmd::WriteTodos => {
+            crate::todos::save_todos(&model.config.cache_dir, &model.data.todos).await?;
             Ok(())
         }
 

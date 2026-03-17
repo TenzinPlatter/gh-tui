@@ -1,4 +1,5 @@
 pub mod action_item_builder;
+pub mod add_todo_modal;
 pub mod create_note_modal;
 pub mod epic_list;
 pub mod keybinds_panel;
@@ -7,6 +8,7 @@ pub mod navbar;
 pub mod notes_list;
 pub mod story_item_builder;
 pub mod story_list;
+pub mod todos_list;
 pub mod iteration_list;
 
 pub use action_item_builder::ActionItemWidget;

@@ -16,9 +16,11 @@ use tokio::sync::mpsc;
 use crate::app::pane::action_menu::ActionMenu;
 use crate::dbg_file;
 use crate::error::{ERROR_NOTIFICATION_MAX_HEIGHT, ErrorInfo};
+use crate::view::add_todo_modal::AddTodoModal;
 use crate::view::create_note_modal::CreateNoteModal;
 use crate::view::description_modal::{DescriptionModal, centered_rect};
 use crate::view::keybinds_panel::KeybindsPanel;
+use crate::view::todos_list::TodosListView;
 use crate::view::{EpicListView, IterationListView};
 use crate::view::{navbar::NavBar, notes_list::NotesListView, story_list::StoryListView};
 use crate::worktree::{create_worktree, get_repo_list, select_repo_with_fzf};
@@ -291,6 +293,14 @@ impl App {
                 epic_list.render_ref(chunks[1], frame.buffer_mut());
             }
 
+            ViewType::Todos => {
+                let todos_view = TodosListView::new(
+                    &self.model.data.todos,
+                    &self.model.ui.todos_list,
+                );
+                todos_view.render_ref(chunks[1], frame.buffer_mut());
+            }
+
             ViewType::Search => {
                 // Placeholder for future views
                 let placeholder = Paragraph::new("Coming soon...").block(Block::bordered());
@@ -332,6 +342,14 @@ impl App {
             let area = frame.area();
             Clear.render(centered_rect(50, 30, area), frame.buffer_mut());
             let modal = CreateNoteModal::new(&self.model.ui.create_note_modal);
+            modal.render_ref(area, frame.buffer_mut());
+        }
+
+        // Render add todo modal on top when showing
+        if self.model.ui.add_todo_modal.is_showing {
+            let area = frame.area();
+            Clear.render(centered_rect(50, 30, area), frame.buffer_mut());
+            let modal = AddTodoModal::new(&self.model.ui.add_todo_modal);
             modal.render_ref(area, frame.buffer_mut());
         }
 

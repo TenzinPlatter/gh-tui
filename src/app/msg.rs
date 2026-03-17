@@ -11,9 +11,11 @@ pub enum Msg {
     NotesList(NotesListMsg),
     IterationList(IterationListMsg),
     EpicList(EpicListMsg),
+    TodosList(TodosListMsg),
     ActionMenu(ActionMenuMsg),
     DescriptionModal(DescriptionModalMsg),
     CreateNoteModal(CreateNoteModalMsg),
+    AddTodoModal(AddTodoModalMsg),
     StoriesLoaded {
         stories: Vec<Story>,
         from_cache: bool,
@@ -97,6 +99,25 @@ pub enum DescriptionModalMsg {
 
 #[derive(Debug, Clone)]
 pub enum CreateNoteModalMsg {
+    Open,
+    Close,
+    TextInput(char),
+    TextBackspace,
+    Accept,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum TodosListMsg {
+    FocusNext,
+    FocusPrev,
+    FocusSectionNext,
+    FocusSectionPrev,
+    ToggleComplete,
+    DeleteSelected,
+}
+
+#[derive(Debug, Clone)]
+pub enum AddTodoModalMsg {
     Open,
     Close,
     TextInput(char),

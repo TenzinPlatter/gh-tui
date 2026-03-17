@@ -6,8 +6,8 @@ use crate::{
         App,
         cmd::Cmd,
         model::{LoadingState, ViewType},
-        msg::{CreateNoteModalMsg, EpicListMsg, IterationListMsg, Msg},
-        pane::{action_menu, create_note_modal, description_modal, epic_list, iteration_list, notes_list, story_list},
+        msg::{AddTodoModalMsg, CreateNoteModalMsg, EpicListMsg, IterationListMsg, Msg},
+        pane::{action_menu, add_todo_modal, create_note_modal, description_modal, epic_list, iteration_list, notes_list, story_list, todos_list},
     },
     dbg_file,
     error::ErrorInfo,
@@ -29,7 +29,9 @@ impl App {
                         handle.abort();
                     }
                 }
-                vec![Cmd::None]
+                // Clean up completed todos on exit
+                self.model.data.todos.retain(|t| !t.completed);
+                vec![Cmd::WriteTodos]
             }
 
             Msg::KeyPressed(key_event) => self.handle_key_input(key_event),
@@ -287,6 +289,18 @@ impl App {
                 &self.model.config,
                 modal_msg,
             ),
+
+            Msg::TodosList(msg) => todos_list::update(
+                &mut self.model.ui.todos_list,
+                &mut self.model.data.todos,
+                msg,
+            ),
+
+            Msg::AddTodoModal(msg) => add_todo_modal::update(
+                &mut self.model.ui.add_todo_modal,
+                &mut self.model.data.todos,
+                msg,
+            ),
         }
     }
 
@@ -379,6 +393,15 @@ impl App {
         if self.model.ui.create_note_modal.is_showing {
             return if let Some(modal_msg) = create_note_modal::key_to_msg(key) {
                 self.update(Msg::CreateNoteModal(modal_msg))
+            } else {
+                vec![Cmd::None]
+            };
+        }
+
+        // Add todo modal intercepts all keys when showing
+        if self.model.ui.add_todo_modal.is_showing {
+            return if let Some(msg) = add_todo_modal::key_to_msg(key) {
+                self.update(Msg::AddTodoModal(msg))
             } else {
                 vec![Cmd::None]
             };
@@ -502,6 +525,14 @@ impl App {
                 }
                 if let Some(msg) = notes_list::key_to_msg(key) {
                     return self.update(Msg::NotesList(msg));
+                }
+            }
+            ViewType::Todos => {
+                if key.code == KeyCode::Char('n') {
+                    return self.update(Msg::AddTodoModal(AddTodoModalMsg::Open));
+                }
+                if let Some(msg) = todos_list::key_to_msg(key) {
+                    return self.update(Msg::TodosList(msg));
                 }
             }
             _ => {}

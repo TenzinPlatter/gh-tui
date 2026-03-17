@@ -4,12 +4,15 @@ use tui_scrollview::ScrollViewState;
 
 use std::{collections::HashMap, path::PathBuf};
 
+use uuid::Uuid;
+
 use crate::{
     api::{epic::EpicSlim, iteration::Iteration, story::Story},
     app::pane::action_menu::ActionMenuState,
     cache::Cache,
     config::Config,
     error::ErrorInfo,
+    todos::Todo,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -37,11 +40,12 @@ impl LoadingState {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ViewType {
     #[default]
-    Stories, // Current default: story list
-    Epics,      // Future: browse all epics
-    Notes,      // Future: browse notes directory
-    Search,     // Future: search across stories/notes
-    Iterations, // browse iterations
+    Stories,
+    Epics,
+    Notes,
+    Todos,
+    Search,
+    Iterations,
 }
 
 impl ViewType {
@@ -50,6 +54,7 @@ impl ViewType {
         ViewType::Stories,
         ViewType::Iterations,
         ViewType::Notes,
+        ViewType::Todos,
         ViewType::Epics,
         ViewType::Search,
     ];
@@ -58,7 +63,8 @@ impl ViewType {
         match self {
             ViewType::Stories => ViewType::Iterations,
             ViewType::Iterations => ViewType::Notes,
-            ViewType::Notes => ViewType::Epics,
+            ViewType::Notes => ViewType::Todos,
+            ViewType::Todos => ViewType::Epics,
             ViewType::Epics => ViewType::Search,
             ViewType::Search => ViewType::Stories,
         }
@@ -68,7 +74,8 @@ impl ViewType {
         match self {
             ViewType::Stories => ViewType::Search,
             ViewType::Search => ViewType::Epics,
-            ViewType::Epics => ViewType::Notes,
+            ViewType::Epics => ViewType::Todos,
+            ViewType::Todos => ViewType::Notes,
             ViewType::Notes => ViewType::Iterations,
             ViewType::Iterations => ViewType::Stories,
         }
@@ -79,6 +86,7 @@ impl ViewType {
             ViewType::Stories => "Stories",
             ViewType::Epics => "Epics",
             ViewType::Notes => "Notes",
+            ViewType::Todos => "Todos",
             ViewType::Search => "Search",
             ViewType::Iterations => "Iterations",
         }
@@ -101,6 +109,7 @@ pub struct DataState {
     pub current_iterations: Option<Vec<Iteration>>,
     pub active_story: Option<Story>,
     pub async_handles: Vec<JoinHandle<()>>,
+    pub todos: Vec<Todo>,
 }
 
 #[derive(Default, Debug)]
@@ -117,9 +126,11 @@ pub struct UiState {
     pub notes_list: NotesListState,
     pub iteration_list: IterationListState,
     pub epic_list: EpicListState,
+    pub todos_list: TodosListState,
     pub action_menu: ActionMenuState,
     pub description_modal: DescriptionModalState,
     pub create_note_modal: CreateNoteModalState,
+    pub add_todo_modal: AddTodoModalState,
     pub show_keybinds_panel: bool,
     pub errors: Vec<ErrorInfo>,
     pub loading: LoadingState,
@@ -173,6 +184,17 @@ pub struct CreateNoteModalState {
     pub input: String,
 }
 
+#[derive(Clone, Debug, Default)]
+pub struct AddTodoModalState {
+    pub is_showing: bool,
+    pub input: String,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct TodosListState {
+    pub selected_id: Option<Uuid>,
+}
+
 impl StoryListState {
     /// Returns the index of the selected story in the given slice, if it exists.
     pub fn selected_index(&self, stories: &[Story]) -> Option<usize> {
@@ -188,7 +210,7 @@ impl DataState {
 }
 
 impl Model {
-    pub fn from_cache_and_config(cache: Cache, config: Config) -> Model {
+    pub fn from_cache_and_config(cache: Cache, config: Config, todos: Vec<Todo>) -> Model {
         let mut model = Model {
             data: DataState {
                 stories: cache.iteration_stories.clone().unwrap_or_default(),
@@ -197,6 +219,7 @@ impl Model {
                 active_story: cache.active_story.clone(),
                 async_handles: Vec::new(),
                 iterations: cache.iterations.clone(),
+                todos,
             },
             ui: UiState::default(),
             config,

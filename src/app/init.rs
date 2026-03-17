@@ -33,10 +33,12 @@ impl App {
         cache.user_id = Some(api_client.user_id);
         cache.write().await?;
 
+        let todos = crate::todos::load_todos(&config.cache_dir).await;
+
         let (sender, receiver) = mpsc::unbounded_channel();
         let sender_clone = sender.clone();
 
-        let mut model = Model::from_cache_and_config(cache, config.clone());
+        let mut model = Model::from_cache_and_config(cache, config.clone(), todos);
 
         let handles = fetch_info_from_api(api_client.clone(), sender).await;
         model.data.async_handles.extend(handles);
@@ -71,6 +73,7 @@ impl App {
                 active_story: None,
                 async_handles: Vec::new(),
                 iterations: vec![iteration.clone()],
+                todos: Vec::new(),
             },
             ui: UiState::default(),
             config: config.clone(),

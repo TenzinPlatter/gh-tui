@@ -35,6 +35,7 @@ pub mod time;
 pub mod tmux;
 pub mod view;
 pub mod zellij;
+pub mod todos;
 pub mod worktree;
 #[macro_use]
 pub mod keys;
